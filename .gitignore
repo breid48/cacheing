@@ -154,3 +154,11 @@ cython_debug/
 
 #PyCharm
 .idea/
+
+#
+updates.txt
+r.py
+r2.py
+t.py
+tempCodeRunnerFile.py
+cache_tests.py
