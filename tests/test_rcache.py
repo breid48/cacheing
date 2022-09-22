@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 import unittest
 
 from typing import ItemsView, KeysView, ValuesView
