@@ -1,3 +1,5 @@
+# pylint: skip-file
+
 import unittest
 
 from typing import ItemsView, KeysView, ValuesView
@@ -70,7 +72,7 @@ class TestRCache(unittest.TestCase):
         self.assertEqual(127, len(cache))
 
     def test_repr(self):   
-        self.assertEqual(repr(self.cache), "{1: 11, 1.01: 1.01, (1, 0): 10, 'foo': 'bar'}")
+        self.assertEqual(repr(self.cache), "RCache{1: 11, 1.01: 1.01, (1, 0): 10, 'foo': 'bar'}")
 
     def test_get(self):
         self.assertEqual(self.cache.get(1, None), 11)
@@ -150,16 +152,16 @@ class TestRCache(unittest.TestCase):
         self.assertNotEqual(cache, eqcache)
 
     def test_cache_size(self):
-        self.assertEqual(self.cache.get_size(), 4)
+        self.assertEqual(len(self.cache), 4)
 
     def test_cache_size_after_deletion(self):
         del self.cache[1]
-        self.assertEqual(self.cache.get_size(), 3)
+        self.assertEqual(len(self.cache), 3)
     
     def test_cache_size_after_pop(self):
         self.cache.pop(1)
-        self.assertEqual(self.cache.get_size(), 3)
+        self.assertEqual(len(self.cache), 3)
 
     def test_cache_size_after_popitem(self):
         self.cache.popitem()
-        self.assertEqual(self.cache.get_size(), 3)
+        self.assertEqual(len(self.cache), 3)
