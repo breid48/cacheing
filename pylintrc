@@ -1,0 +1,8 @@
+[MAIN]
+
+ignore-patterns=^test.*
+
+[BASIC]
+
+# Disable pylint warnings for getters/setters
+docstring-min-length=3
