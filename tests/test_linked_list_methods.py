@@ -26,19 +26,19 @@ class TestLinkedList(unittest.TestCase):
 
     def test_linked_list_insert_empty_list(self):
         link = _TTLLink()
-        self.default_linked_list.insert_link(link)
+        self.default_linked_list.insert(link)
 
         self.assertEqual(self.default_linked_list.head, link, msg="insertion into empty list does not populate head of linked list")
 
     def test_linked_list_insert_link(self):
         link = _TTLLink()
-        self.pop_linked_list.insert_link(link)
+        self.pop_linked_list.insert(link)
 
         self.assertEqual(self.pop_linked_list.head.next, link, msg="incorrect insertion into populated linked list")
 
     def test_linked_list_tail_node(self):
         link = _TTLLink()
-        self.pop_linked_list.insert_link(link)
+        self.pop_linked_list.insert(link)
 
         self.assertEqual(None, self.pop_linked_list.head.next.next, msg="tail node in linked list does not point to None")
 

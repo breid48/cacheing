@@ -13,6 +13,7 @@ Licensed under MIT.
 """
 import random
 import time
+import inspect
 
 from collections import abc, OrderedDict, Counter
 from collections.abc import KeysView, ItemsView, ValuesView
@@ -78,7 +79,10 @@ class RCache(abc.MutableMapping):
             self.__cache[_key] = _value
 
     def __getitem__(self, _key):
-        return self.__cache[_key]
+        try:
+            return self.__cache[_key]
+        except KeyError:
+            raise KeyError(_key)
 
     def get(self, _key, _default=None):
         try:
@@ -92,14 +96,13 @@ class RCache(abc.MutableMapping):
 
     def pop(self, _key, default=__singleton):
         try:
-            _value = self.__cache[_key]
+            _value = self[_key]
+            del self[_key]
         except KeyError:
             if default is self.__singleton:
                 raise
             return default
         else:
-            del self.__cache[_key]
-            self.__size -= 1
             return _value
 
     def popitem(self):
@@ -145,32 +148,23 @@ class RCache(abc.MutableMapping):
         return len(self.__cache)
 
     def __repr__(self):
-        return str(self.__cache)
-
-    def __str__(self):
         return self.__class__.__name__ + str(self.__cache)
 
     def keys(self):
-        return KeysView(self.__cache)
+        return self.__cache.keys()
 
     def values(self):
-        return ValuesView(self.__cache)
+        return self.__cache.values()
 
     def items(self):
-        return ItemsView(self.__cache)
+        return self.__cache.items()
 
-    def update(self, _object: abc.Iterable):
-        return self.__cache.update(_object)
+    # def update(self, _object: abc.Iterable):
+    #     return self.__cache.update(_object)
 
-    def set_default(self, _key, _value):
-        return self.__cache.setdefault(_key, _value)
-
-    def clear(self):
-        return self.__cache.clear()
-
-    def get_size(self):
-        return self.__size
-
+    # def set_default(self, _key, _value):
+    #     return self.__cache.setdefault(_key, _value)
+    
 
 class LRUCache(RCache):
     """Least Recently Used Cache.
@@ -230,7 +224,7 @@ class LRUCache(RCache):
         except KeyError:
             raise KeyError("cannot pop from empty cache") from None
         else:
-            RCache.pop(self, _key)
+            RCache.__delitem__(self, _key)
             return (_key, _value)
             
     def _evict(self):
@@ -246,12 +240,10 @@ class LRUCache(RCache):
 
         """
         try:
-            _key, _value = self.__lru.popitem()
-        except KeyError:
+            _key, _value = self.popitem()
+        except StopIteration:
             raise KeyError("cannot evict from empty cache") from None
         else:
-            RCache.pop(self, _key)
-
             if self._callback:
                 self._callback(_key, _value)
 
@@ -361,7 +353,7 @@ class LFUCache(RCache):
 
 
 class RandomCache(RCache):
-    def __init__(self, capacity, callback):
+    def __init__(self, capacity, callback=None):
         RCache.__init__(self, capacity, callback)
         
         # To maintain constant time across
@@ -432,19 +424,28 @@ class TTLCache(LRUCache):
     By default, monotonic time is used to track
     key expiry times.
     """
-    def __init__(self, capacity, callback, ttl, time=time.monotonic):
+    def __init__(self, capacity, ttl, callback=None, time=time.monotonic):
         LRUCache.__init__(self, capacity, callback)
 
         self.time = time
         self.__ttl = ttl
 
-        self.__links = {} # Dict Mapping Keys to `_TTLLinks`
-        self.__list = _TTLLinkedList()
+        # Dict Mapping Keys to `_TTLLinks`
+        # this is primarily used for O(1) 
+        # lookup and deletions of `_TTLLinks`
+        self.__links = {}
         
-    def expire(time):
-        """
-        Function decorator. Iterates over the linked list
-        and removes expired keys from the cache whenever
+        # Linked List of '_TTLLinks'
+        # The linked list is 'sorted' in time-ascending
+        # order. The key with the nearest expiry time is 
+        # at the front of the list.
+        self.__list = _TTLLinkedList() 
+        
+    def expire(_time):
+        """Removes expired keys from the cache.
+        
+        Decorator for class methods. Iterates over the linked 
+        list and removes expired keys from the cache whenever
         the cache is accessed.
 
         """
@@ -454,19 +455,19 @@ class TTLCache(LRUCache):
                 curr = self.__list.head
 
                 while curr:
-                    if curr.expiry < time:
+                    if curr.expiry < _time():
                         LRUCache.__delitem__(self, curr.key)
                         self.__list.remove(curr)
                         del self.__links[curr.key]
                         curr = curr.next
                     else:
                         return func(self, *args)
-
+                
                 return func(self, *args)
             return wrapped_f
         return wrap
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic)
     def __setitem__(self, _key, _value):
         LRUCache.__setitem__(self, _key, _value)
         try:
@@ -480,8 +481,9 @@ class TTLCache(LRUCache):
             link.expiry = expiry
         
         self.__list.insert(link)
+        print("set 1")
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic)
     def __getitem__(self, _key):
         try:
             _value = LRUCache.__getitem__(self, _key)
@@ -490,7 +492,7 @@ class TTLCache(LRUCache):
         else:
             return _value
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic)
     def __delitem__(self, _key):
         try:
             LRUCache.__delitem__(self, _key)
@@ -498,74 +500,64 @@ class TTLCache(LRUCache):
             raise KeyError(f"{_key}") from None
         else:
             link = self.__links[_key]
-            self.__list.remove(_key)
+            self.__list.remove(link)
             del self.__links[_key]
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic)
     def __contains__(self, _object: object):
         return RCache.__contains__(_object)
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic)
     def __iter__(self):
         return RCache.__iter__(self)
     
     def _evict(self):
-        """Evict when Cache is over Capacity"""
+        """Handle evictions when Cache exceeds capacity. 
+        Not time-related.
+
+        Invokes callback function whenever an item is evicted.
+        
+        """
+        # Fetch and Evict LRU Item from LRUCache
         _key, _value = LRUCache.popitem()
         
+        # Remove References to Link
+        link = self.__links[_key]
+        self.__list.remove(link)
+        del self.__links[_key]
+
+        if self._callback:
+            self._callback(_key, _value)
+    
+    @expire(_time=time.monotonic)
+    def __str__(self):
+        return RCache.__repr__(self)
 
     def popitem(self):
-        return
+        """Evict the LRU item.
+
+        """
+        # Fetch and Evict LRU Item from LRUCache
+        _key, _value = LRUCache.popitem()
+        
+        # Remove References to Link
+        link = self.__links[_key]
+        self.__list.remove(link)
+        del self.__links[_key]
             
     """
-    @expire(time=time.monotonic())
-    def __len__(self):
-        return len(self.__cache)
 
-    @expire(time=time.monotonic())
-    def __repr__(self):
-        return str(self.__cache)
-
-    @expire(time=time.monotonic())
-    def get(self, _key: object, _default=None):
-        return self.__cache.get(_key, _default)
-
-    @expire(time=time.monotonic())
-    def keys(self):
-        return self.__cache.keys()
-
-    @expire(time=time.monotonic())
-    def values(self):
-        return self.__cache.values()
-
-    @expire(time=time.monotonic())
-    def items(self):
-        return self.__cache.items()
-
-    @expire(time=time.monotonic())
-    def pop(self, _object: object):
-        return self.__cache.pop(_object)
-
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic())
     def update(self, _object: abc.Iterable):
         return self.__cache.update(_object)
 
-    @expire(time=time.monotonic())
+    @expire(_time=time.monotonic())
     def set_default(self, _key, _value):
         return self.__cache.setdefault(_key, _value)
 
     def clear(self):
         return self.__cache.clear()
 
-    @expire(time=time.monotonic())
-    def _get_expiry(self, key):
-        head = self._list.head()
-        while head:
-            if head.key == key:
-                return head.expiry
-            head = head.next
-
-        raise KeyError("key is not in cache")
     """
 
 # class VolatileTTLCache(LRUCache):
