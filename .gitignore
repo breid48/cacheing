@@ -1,5 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+/__pycache__
+*/__pycache__
 *.py[cod]
 *$py.class
 
@@ -128,6 +130,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# VS-Code
+.vscode
+/.vscode
+*.vscode
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -162,3 +169,9 @@ r2.py
 t.py
 tempCodeRunnerFile.py
 cache_tests.py
+benchmark.py
+cache_tests.py
+tests/unfactored_name.py
+unfactored_name.py
+unfactored2.py
+tests/unfactored2.py
