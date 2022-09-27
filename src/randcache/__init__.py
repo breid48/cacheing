@@ -4,7 +4,7 @@ by `cachetools` and Redis, this library supports Redis eviction
 policies that are not available in the `cachetools` python 
 standard library. 
 
-Additionally, per-item TTL's are supported by default, as opposed
+Per-item TTL's are supported in the 'VolatileTTLCache', as opposed
 to the global TTL's offered by `cachetools` TTLCache.
 
 Copyright 2022, Blake Reid.
