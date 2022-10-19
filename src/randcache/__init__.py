@@ -185,22 +185,22 @@ class VolatileCache:
         self.__capacity = capacity
         self._callback = callback
 
-        # Lookup Table for items which expire
-        self._expires = {}
+        # Dict containing items which expire
+        self._expires_map = {}
 
     def set(self, _key, _value, expires):
         if _key not in self.__cache:
-            while self.__size >= self.__capacity and self._expires:
+            while self.__size >= self.__capacity and self._expires_map:
                 self._evict()
             if self.__size < self.__capacity: # Otherwise, new data item is discarded
                 self.__cache[_key] = _value
                 if expires:
-                    self._expires[_key] = _value
+                    self._expires_map[_key] = _value
                 self.__size += 1
         else:
             self.__cache[_key] = _value
             if expires:
-                self._expires[_key] = _value
+                self._expires_map[_key] = _value
 
     def __getitem__(self, _key):
         try:
@@ -216,7 +216,7 @@ class VolatileCache:
 
     def __delitem__(self, _key):
         del self.__cache[_key]
-        self._expires.pop(_key, None)
+        self._expires_map.pop(_key, None)
         self.__size -= 1
 
     def pop(self, _key, default=__singleton):
@@ -236,7 +236,7 @@ class VolatileCache:
         """
         try:
             key, value = self.__cache.popitem()
-            self._expires.pop(key, None)
+            self._expires_map.pop(key, None)
         except KeyError:
             raise KeyError("cache is empty") from None
         else:
@@ -251,13 +251,13 @@ class VolatileCache:
             KeyError: Cache is empty.
         """
         try:
-            key = next(iter(self._expires))
+            key = next(iter(self._expires_map))
         except StopIteration:
             raise KeyError("no candidate keys available to evict") from None
 
         value = self[key]
         del self.__cache[key]
-        del self._expires[key]
+        del self._expires_map[key]
         self.__size -= 1
 
         if self._callback:
@@ -288,7 +288,7 @@ class VolatileCache:
     
     def __eq__(self, object):
         return (self.__cache == object.__cache and 
-                self._expires == object._expires)
+                self._expires_map == object._expires_map)
 
     # def update(self, _object: abc.Iterable):
     #     return self.__cache.update(_object)
@@ -427,11 +427,10 @@ class VolatileLRUCache(VolatileCache):
         """
         try:
             _value = VolatileCache.__getitem__(self, _key)
-            expires = self._expires[_key]
         except KeyError:
             raise KeyError from None
         else:
-            if expires:
+            if self._expires_map.get(_key): # Key Expires
                 self._lru.move_to_end(_key, last=False)
             return _value
 
@@ -521,7 +520,9 @@ class LFUCache(RCache):
         Returns:
             tuple: (Key, Value) pair removed.
         """
-        #print(self.__dict__)
+        if not self.__lfu.cache:
+            raise KeyError("cannot pop from empty cache")
+
         try:
             _key, _value = self.__lfu.delete_lfu_item()
         except KeyError:
@@ -542,34 +543,115 @@ class LFUCache(RCache):
                 self._callback(_key, _value)
 
     def print_cache(self):
-        # REMOVE #
-        #        #
-        #        #
-        #        #
-        #        #
-
+        """ Remove """
         self.__lfu.print_list()
         
 
-# class VolatileLFUCache(LFUCache):
-#     """Volatile Least-Frequently Used Cache.
+class VolatileLFUCache(VolatileCache):
+    """Volatile Least-Frequently Used Cache.
 
-#     Evicts key with `expire` field set to true using
-#     a least-frequently used eviction policy.
+    Evicts key with `expire` field set to true using
+    a least-frequently used eviction policy.
     
-#     """
-#     pass
+    """
+    def __init__(self, capacity, callback=None):
+        VolatileCache.__init__(self, capacity, callback)
+        self.__lfu = _LFUList()
+
+    def set(self, _key, _value, _expires):
+        VolatileCache.set(self, _key, _value, _expires)
+
+        # Check if a node with this key already exists.
+        # If a node sharing this key exists in the LFU stream 
+        # and it's expiry setting is changed to False, remove 
+        # it from the LFU stream.
+        if self.__lfu.cache.get(_key) and not _expires:
+            node = self.__lfu.cache[_key]
+            self.__lfu.delete_node(node)
+        
+        # Otherwise, update it's value and access frequency.
+        elif self.__lfu.cache.get(_key) and _expires:
+            node = self.__lfu.cache[_key]
+            node.value = _value
+            self.__lfu.access_node(node)
+
+        # If no preexisting node exists, create the node and insert
+        # it into the DLL.
+        elif not self.__lfu.cache.get(_key) and _expires:
+            self.__lfu.insert(_key, _value)
+
+    def __getitem__(self, _key):
+        try:
+            value = VolatileCache.__getitem__(self, _key)
+        except KeyError:
+            raise KeyError(f"{_key}") from None
+
+        if self.__lfu.cache.get(_key):
+            node = self.__lfu.cache[_key]
+            self.__lfu.access_node(node)
+
+        return value
+
+    def __delitem__(self, _key):
+        VolatileCache.__delitem__(self, _key)
+        
+        if self.__lfu.cache.get(_key):
+            node = self.__lfu.cache[_key]
+            self.__lfu.delete_node(node)
+
+    def popitem(self):
+        """Forces eviction of LFU item.
+
+        Raises:
+            KeyError: Cache is Empty
+
+        Returns:
+            tuple: (Key, Value) pair removed.
+        """
+        
+        # If there's no items to expire, return None
+        if not self._expires_map:
+            return (None, None)
+
+        try:
+            _key, _value = self.__lfu.delete_lfu_item()
+        except KeyError:
+            raise
+            raise KeyError("cannot evict from empty cache") from None
+        else:
+            VolatileCache.__delitem__(self, _key)
+            #print(self.__dict__)
+            return (_key, _value)
+
+    def _evict(self):
+        """Evicts non-persistent LFU Item and Invokes Callback Function.
+        
+        """
+        if not self._expires_map:
+            return None
+
+        try:
+            _key, _value = self.__lfu.delete_lfu_item()
+        except KeyError:
+            raise KeyError("cannot evict from empty cache") from None
+        else:
+            VolatileCache.__delitem__(self, _key)
+            if self._callback:
+                self._callback(_key, _value)
 
 
 class RandomCache(RCache):
+    """Randomly chooses keys to evict from the cache.
+
+    """
     def __init__(self, capacity, callback=None):
         RCache.__init__(self, capacity, callback)
         
+        self.set = [] 
         # To maintain constant time across
         # all operations, maintain a dictionary
         # which tracks the index of each key stored
         # in `self.set`.
-        self.set = [] 
         self.idx_map = {}  
 
     def __setitem__(self, _key, _value):
@@ -621,8 +703,69 @@ class RandomCache(RCache):
         return random.choice(self.set)
 
 
-# class VolatileRandomCache(RCache):
-#     pass
+class VolatileRandomCache(VolatileCache):
+    """Randomly evicts keys that are set to expire.
+
+    """
+    def __init__(self, capacity, callback=None):
+        VolatileCache.__init__(self, capacity, callback)
+        
+        self._set = [] 
+        # To maintain constant time across
+        # all operations, maintain a dictionary
+        # which tracks the index of each key stored
+        # in `self.set`.
+        self.idx_map = {}  
+
+    def set(self, _key, _value, expires):
+        VolatileCache.set(self, _key, _value, expires)
+        if _key not in self.idx_map and expires:
+            self._set.append(_key)
+            self.idx_map[_key] = len(self._set) - 1
+    
+    def __delitem__(self, _key):
+        VolatileCache.__delitem__(self, _key)
+        # In order to perform a deletion without having 
+        # to iteratively decrement each element of `idx_map`, 
+        # we swap the last element of `set` with the element 
+        # to be deleted, and then pop the last element from `set`.
+        if _key in self.idx_map:
+            last_elem = self._set[-1]
+            index = self.idx_map[_key]
+            ssize = len(self._set) - 1
+
+            if index < ssize:
+                self._set[index] = last_elem
+                self.idx_map[last_elem] = index
+            
+            self._set.pop()
+            del self.idx_map[_key]
+
+    def popitem(self):
+        """Force Eviction of Random item.
+        
+        """
+        try:
+            _key = self.__get_rand_key()
+        except:
+            raise KeyError("cannot pop from empty cache") from None
+        else:
+            _val = VolatileCache.__getitem__(self, _key)
+            del self[_key]
+            return (_key, _val)
+
+    def _evict(self):
+        
+        _key, _value = self.popitem()
+
+        if self._callback:
+            self._callback(_key, _value)
+
+    def __get_rand_key(self):
+        """Generate a random key from the cache.
+        
+        """
+        return random.choice(self._set)
 
 
 class TTLCache(LRUCache):
@@ -683,7 +826,7 @@ class TTLCache(LRUCache):
             link = self._links[_key]
         except:
             expiry = self.time() + self.__ttl
-            self._links[_key] = link = _TTLLink(_key, expiry, None)
+            self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
             expiry = self.time() + self.__ttl
@@ -713,7 +856,7 @@ class TTLCache(LRUCache):
 
     @expire(_time=time.monotonic)
     def __contains__(self, _object: object):
-        return RCache.__contains__(_object)
+        return RCache.__contains__(self, _object)
 
     @expire(_time=time.monotonic)
     def __iter__(self):
@@ -727,7 +870,7 @@ class TTLCache(LRUCache):
         
         """
         # Fetch and Evict LRU Item from LRUCache
-        _key, _value = LRUCache.popitem()
+        _key, _value = LRUCache.popitem(self)
         
         # Remove References to Link
         link = self._links[_key]
@@ -773,9 +916,236 @@ class TTLCache(LRUCache):
 
     """
 
-# class VolatileTTLCache(LRUCache):
-#     pass
 
+class VolatileTTLCache(VolatileLRUCache):
+    def __init__(self, capacity, ttl, callback=None, time=time.monotonic):
+        VolatileLRUCache.__init__(self, capacity, callback)
+
+        self.time = time
+        self.__ttl = ttl
+
+        # Dict Mapping Keys to `_TTLLinks`
+        # this is primarily used for O(1) 
+        # lookup and deletions of `_TTLLinks`
+        self._links = {}
+        
+        # Linked List of '_TTLLinks'
+        # The linked list is 'sorted' in time-ascending
+        # order. The key with the nearest expiry time is 
+        # at the front of the list.
+        self._list = _TTLLinkedList()
+    
+    def expire(_time):
+        """Removes expired keys from the cache.
+    
+        Decorator for class methods. Iterates over the linked 
+        list and removes expired keys from the cache when
+        the cache is accessed.
+
+        """
+        def wrap(func):
+            
+            def wrapped_f(self, *args):
+                curr = self._list.head
+
+                while curr:
+                    if curr.expiry < _time():
+                        VolatileLRUCache.__delitem__(self, curr.key)
+                        self._list.remove(curr)
+                        del self._links[curr.key]
+                        curr = curr.next
+                    else:
+                        return func(self, *args)
+                
+                return func(self, *args)
+            return wrapped_f
+        return wrap
+
+    @expire(_time=time.monotonic)
+    def set(self, _key, _value, expires):
+        VolatileLRUCache.set(self, _key, _value, expires)
+        try:
+            link = self._links[_key]
+        except:
+            if expires:
+                expiry = self.time() + self.__ttl
+                self._links[_key] = link = _TTLLink(_key, expiry, None, None)
+        else:
+            self._list.remove(link)
+            expiry = self.time() + self.__ttl
+            link.expiry = expiry
+        
+        if expires:
+            self._list.insert(link)
+
+    @expire(_time=time.monotonic)
+    def __getitem__(self, _key):
+        try:
+            _value = VolatileLRUCache.__getitem__(self, _key)
+        except KeyError:
+            raise KeyError(f"{_key}") from None
+        else:
+            return _value
+
+    @expire(_time=time.monotonic)
+    def __delitem__(self, _key):
+        try:
+            VolatileLRUCache.__delitem__(self, _key)
+        except KeyError:
+            raise KeyError(f"{_key}") from None
+        else:
+            if _key in self._links:
+                link = self._links[_key]
+                self._list.remove(link)
+                del self._links[_key]
+
+    @expire(_time=time.monotonic)
+    def __contains__(self, _object: object):
+        return VolatileLRUCache.__contains__(self, _object)
+
+    @expire(_time=time.monotonic)
+    def __iter__(self):
+        return VolatileLRUCache.__iter__(self)
+    
+    def _evict(self):
+        """Handle evictions when Cache exceeds capacity. 
+        Not time-related.
+
+        Invokes callback function whenever an item is evicted.
+        
+        """
+        # Fetch and Evict LRU Item from LRUCache
+        _key, _value = VolatileLRUCache.popitem(self)
+        
+        # Remove References to Link
+        if _key in self._links:
+            link = self._links[_key]
+            self._list.remove(link)
+            del self._links[_key]
+
+        if self._callback:
+            self._callback(_key, _value)
+    
+    @expire(_time=time.monotonic)
+    def __str__(self):
+        return VolatileLRUCache.__repr__(self)
+
+    def popitem(self):
+        """Evict the LRU item.
+
+        """
+        # Fetch and Evict LRU Item from LRUCache
+        _key, _value = VolatileLRUCache.popitem()
+        
+        # Remove References to Link
+        if _key in self._list:
+            link = self._links[_key]
+            self._list.remove(link)
+            del self._links[_key]
+
+    # Enable 'expire' decorator to be accessed
+    # outside of the scope of the class, while 
+    # still being inside the class namespace.
+    expire = staticmethod(expire)
+
+
+class VTTLCache(TTLCache):
+    """Variable time-to-live cache with per-key time to lives.
+
+    """
+    def __init__(self, capacity, callback=None, time=time.monotonic):
+        TTLCache.__init__(self, capacity, ttl=None, callback=callback, time=time)
+        self.__rep = [] # List Representation of the Linked List
+
+    @TTLCache.expire(_time=time.monotonic)
+    def set(self, _key, _value, ttl):
+        LRUCache.__setitem__(self, _key, _value)
+        try:
+            link = self._links[_key]
+        except:
+            expiry = self.time() + ttl
+            self._links[_key] = link = _TTLLink(_key, expiry, None, None)
+        else:
+            self._list.remove(link)
+            self.__rep.remove(link)
+            expiry = self.time() + ttl
+            link.expiry = expiry
+        
+        self.__insert(link, expiry, _key)
+    
+    def _evict(self):
+        """Handle evictions when Cache exceeds capacity. 
+        Not time-related.
+
+        Invokes callback function whenever an item is evicted.
+        
+        """
+        # Fetch and Evict LRU Item from LRUCache
+        _key, _value = LRUCache.popitem(self)
+        
+        # Remove References to Link
+        link = self._links[_key]
+        self.__rep.remove(link)
+        self._list.remove(link)
+        del self._links[_key]
+
+        if self._callback:
+            self._callback(_key, _value)
+    
+    def __binary_search(self, expiry):
+        """Binary searches the list of TTL nodes.
+
+        Args:
+            expiry (int): item expiry time.
+
+        Returns:
+            int, int: Node insertion reference, list
+            insertion reference
+
+        """
+        left = 0
+        right = tail = len(self.__rep) - 1
+
+        while left <= right:
+            mid = (right + left) // 2
+
+            if self.__rep[mid].expiry < expiry:
+                if mid == tail:
+                    return mid, mid + 1
+                elif self.__rep[mid + 1].expiry >= expiry:
+                    return mid, mid + 1
+                left += 1
+            
+            elif self.__rep[mid].expiry > expiry:
+                if mid == 0:
+                    return 0, 0
+                elif self.__rep[mid - 1].expiry <= expiry:
+                    return mid, mid
+                right -= 1
+            
+            else:
+                return mid, mid
+        
+        return 0, 0
+    
+    def __insert(self, link, expiry, _key):
+        """Handle Insertions of Link to the Linked List
+        and List Representation.
+
+        Args:
+            link (_type_): _description_
+            expiry (_type_): _description_
+
+        """
+        node_index, list_index = self.__binary_search(expiry)
+        
+        if self.__rep:
+            prev_link = self.__rep[node_index]
+        else:
+            prev_link = None
+
+        self._list.sorted_insert(prev_link, link)
+        self.__rep.insert(list_index, link)
 
 class BoundedTTLCache(TTLCache):
     """
@@ -796,7 +1166,7 @@ class BoundedTTLCache(TTLCache):
         except:
             ttl = random.randrange(self.ttl_min, self.ttl_max + 1)
             expiry = self.time() + ttl
-            self._links[_key] = link = _TTLLink(_key, expiry, None)
+            self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
             ttl = random.randrange(self.ttl_min, self.ttl_max + 1)

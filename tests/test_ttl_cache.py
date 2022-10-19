@@ -42,3 +42,25 @@ class TestTTLCache(IsolatedAsyncioTestCase):
         await asyncio.sleep(3) # Some task
 
         self.assertEqual(self.cache.get(1), None)
+    
+    def test_capacity_eviction(self):
+        """Ensure Cache evictions occur using an LRU policy when over capacity"""
+        self.cache[1] = 2
+        self.cache[2] = 3
+        self.cache[3] = 4
+        self.cache[4] = 5
+        self.cache[5] = 6
+        self.cache[6] = 7
+
+        self.cache[7] = 8
+        self.cache[2]
+        self.cache[8] = 9
+
+        self.assertNotIn(1, self.cache)
+        self.assertNotIn(3, self.cache)        
+
+        self.assertIn(2, self.cache)
+        self.assertIn(4, self.cache)
+        self.assertIn(5, self.cache)
+        self.assertIn(6, self.cache)
+        self.assertIn(7, self.cache)
