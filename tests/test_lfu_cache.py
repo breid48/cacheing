@@ -22,12 +22,16 @@ class TestLFUCache(unittest.TestCase):
         self.cache[1]
         self.cache[3]
         self.cache[5]
-
-        k, v = self.cache.popitem()
-        self.assertEqual(k, 2)
+        self.cache[5]
+        self.cache[1]
+        self.cache[3]
+        self.cache[2]
 
         k, v = self.cache.popitem()
         self.assertEqual(k, 4)
+
+        k, v = self.cache.popitem()
+        self.assertEqual(k, 2)
 
     def test_lfu_set_item_lfu_update(self):
         self.cache[6] = 7
@@ -42,11 +46,13 @@ class TestLFUCache(unittest.TestCase):
 
     def test_lfu_eviction(self):
         self.cache[6] = 7
+        self.cache[1]
+        self.cache[2]
         self.cache[7] = 8
         self.cache[8] = 9
 
-        self.assertNotIn(1, self.cache)
-        self.assertNotIn(2, self.cache)
+        self.assertNotIn(3, self.cache)
+        self.assertNotIn(4, self.cache)
 
     def test_lfu_callback(self):
         f = Mock()
@@ -69,3 +75,8 @@ class TestLFUCache(unittest.TestCase):
         self.assertIn(1, self.cache)
         self.assertIn(2, self.cache)
         self.assertIn(3, self.cache)
+    
+    def test_pop_from_empty_cache_raises(self):
+        cache = LFUCache(capacity=6, callback=None)
+        
+        self.assertRaises(KeyError, lambda: cache.popitem())

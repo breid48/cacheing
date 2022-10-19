@@ -4,10 +4,11 @@ class _TTLLink:
     """Link in Linked List.
 
     """
-    def __init__(self, key=None, expiry=None, nxt=None):
+    def __init__(self, key=None, expiry=None, nxt=None, prev=None):
         self.key = key
         self.expiry = expiry
         self.next = nxt
+        self.prev = prev
 
     def get_key(self):
         return self.key
@@ -35,28 +36,51 @@ class _TTLLinkedList:
             link (_TTLLink): `_TTLLink` to insert
         """
         if self.__head:
+            link.prev = self.__tail
             self.__tail.next = self.__tail = link
         else:
             self.__head = self.__tail = link
 
     def remove(self, link):
-
+        
         if self.__head == link:
-            self.__head = self.__head.next
+            self.__head = link.next
+        elif self.__tail == link:
+            self.__tail = link.prev
+        else:
+            link.prev.next = link.next
+            link.next.prev = link.prev
+
+    def sorted_insert(self, prev_link, link):
+        """Sorted insert into the VTTL Linked List.
+        
+        Because VTTL cache items have variable
+        time-to-lives, the VTTL Linked List is sorted 
+        in ascending order by expiry time.
+
+        'prev_link' is determined by performing a binary
+        search on the list represenation of the linked list.
+
+        """
+        if not prev_link:
+            self.__head = self.__tail = link
             return
 
-        curr = last = self.__head
-
-        while curr:
-            if curr.key == link.key:
-                last.next = curr.next
-                link.next = None
-                return
-            last = curr
-            curr = curr.next
-
-        raise KeyError("invalid link")
-
+        if prev_link.expiry < link.expiry:
+            link.next = prev_link.next
+            link.prev = prev_link
+            prev_link.next = link
+            
+            if self.__tail == prev_link:
+                self.__tail = link
+        
+        else:
+            link.next = prev_link
+            link.prev = prev_link.prev
+            prev_link.prev = link
+            
+            if self.__head == prev_link:
+                self.__head = link
 
 class _LFUNode:
     """Object representing each item in the cache.
@@ -74,7 +98,6 @@ class _LFUNode:
         self.value = value # Value of the Key: Value pair
         self.parent = parent # Pointer to parent `_LFUFreqNode`
 
-
 class _LFUFreqNode:
     """Doubly linked list of `_LFUNode`
        objects sharing the same frequency.
@@ -89,11 +112,6 @@ class _LFUFreqNode:
         self.frequency = frequency
         self.next = nxt
         self.prev = prev
-
-        if prev:
-            prev.next = self
-        if nxt:
-            nxt.prev = self
 
         # Maintain an OrderedDict of `_LFUNode`
         # objects sharing the same frequency.
@@ -126,16 +144,19 @@ class _LFUList:
         #        #
         # REMOVE #
         hd = self.head
-        print(self.cache)
+        
         while hd is not None:
+            print(f"[Freq: {hd.frequency}]", end=" ")
+            print("{", end="")
             for item in hd.items:
                 print(f"{item.key}:{item.value}", end=" ")
-            print(" -> ", end=" ")
+
+            print("} -> ", end=" ")
             hd = hd.next
         print("\n\n\n")
 
     def delete_lfu_item(self):
-        """Evicts least-frequently item from the cache.
+        """Evicts least-frequently used item from the cache.
 
         Removes all references to the least-frequently 
         used `_LFUNode` from the cache and linked lists.
@@ -184,7 +205,7 @@ class _LFUList:
             node.next.prev = self.head
             self.head.next = node.next
         elif node == self.head:
-            raise TypeError("can't delete head")
+            raise TypeError("can't remove head")
 
     def insert(self, _key, _value):
         """Create and Insert a new item into the
@@ -237,10 +258,12 @@ class _LFUList:
                 freq_node = _LFUFreqNode(freq + 1, nxt=node.parent.next, prev=node.parent)
                 node.parent.next.prev = freq_node
                 node.parent.next = freq_node
+                node.parent = node.parent.next
                 freq_node.items[node] = None
         else:
             freq_node = _LFUFreqNode(freq + 1, nxt=None, prev=node.parent)
             node.parent.next = freq_node
+            node.parent = node.parent.next
             freq_node.items[node] = None
 
         del prev_parent.items[node]
