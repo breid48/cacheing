@@ -87,4 +87,14 @@ class TestLRUCache(unittest.TestCase):
         self.assertIn(6, self.cache)
 
     def test_lru_cache_size(self):
-        return
+        cache = LRUCache(capacity=51)
+        
+        for i in range(100):
+            cache[i] = i+1
+        
+        self.assertEqual(51, len(cache))
+
+        cache.popitem()
+        cache.popitem()
+
+        self.assertEqual(49, len(cache))

@@ -11,11 +11,11 @@ class TestVolatileLFUCache(unittest.TestCase):
     def setUp(self):
         self.cache = VolatileLFUCache(capacity=6, callback=None)
 
-        self.cache.set(1, 2, True)
-        self.cache.set(2, 3, True)
-        self.cache.set(3, 4, True)
-        self.cache.set(4, 5, True)
-        self.cache.set(5, 6, True)
+        self.cache[1, True] = 2
+        self.cache[2, True] = 3
+        self.cache[3, True] = 4
+        self.cache[4, True] = 5
+        self.cache[5, True] = 6
 
     def test_get_item_lfu_update(self):
 
@@ -32,11 +32,11 @@ class TestVolatileLFUCache(unittest.TestCase):
     def test_get_item_lfu_update_with_persistent_keys(self):
         cache = VolatileLFUCache(capacity=6, callback=None)
 
-        cache.set(1, 2, True)
-        cache.set(2, 3, False) # Persist
-        cache.set(3, 4, True)
-        cache.set(4, 5, True)
-        cache.set(5, 6, True)
+        cache[1, True] = 2
+        cache[2, False] = 3
+        cache[3, True] = 4
+        cache[4, True] = 5
+        cache[5, True] = 6
 
         cache[1]
         key, value = cache.popitem()
@@ -48,7 +48,7 @@ class TestVolatileLFUCache(unittest.TestCase):
         self.assertEqual(k, 1)
 
     def test_lfu_set_item_lfu_update(self):
-        self.cache.set(6, 7, True)
+        self.cache[6, True] = 7
         self.cache.popitem()
         self.cache.popitem()
         self.cache.popitem()
@@ -66,15 +66,15 @@ class TestVolatileLFUCache(unittest.TestCase):
     def test_lfu_set_item_with_persistence(self):
         cache = VolatileLFUCache(capacity=5)
 
-        cache.set(1, 2, False)
-        cache.set(2, 3, False)
-        cache.set(3, 4, False)
-        cache.set(4, 5, False)
-        cache.set(5, 6, False)
+        cache[1, False] = 2
+        cache[2, False] = 3
+        cache[3, False] = 4
+        cache[4, False] = 5
+        cache[5, False] = 6
 
-        cache.set(6, 7, False)
-        cache.set(7, 8, False)
-        cache.set(8, 9, False)
+        cache[6, False] = 7
+        cache[7, False] = 8
+        cache[8, False] = 9
 
         self.assertIn(1, cache)
         self.assertIn(2, cache)
@@ -87,7 +87,7 @@ class TestVolatileLFUCache(unittest.TestCase):
         self.assertNotIn(8, cache)
 
     def test_lfu_eviction(self):
-        self.cache.set(6, 7, True)
+        self.cache[6, True] = 7
 
         self.cache[1]
         self.cache[2]
@@ -96,12 +96,12 @@ class TestVolatileLFUCache(unittest.TestCase):
         self.cache[4]
         self.cache[4]
 
-        self.cache.set(7, 8, True)
+        self.cache[7, True] = 8
         
         self.assertNotIn(5, self.cache)
 
     def test_lfu_frequency_jumps(self):
-        self.cache.set(6, 7, True)
+        self.cache[6, True] = 7
 
         self.cache[1]
         self.cache[1]
@@ -110,7 +110,7 @@ class TestVolatileLFUCache(unittest.TestCase):
         self.cache[2]
         self.cache[3]
 
-        self.cache.set(7, 8, True)
+        self.cache[7, True] = 8
         self.assertNotIn(4, self.cache)
 
     def test_lfu_callback(self):
@@ -119,8 +119,8 @@ class TestVolatileLFUCache(unittest.TestCase):
     
         callback_cache = VolatileLFUCache(capacity=1, callback=f)
         
-        callback_cache.set(1, 2, True)
-        callback_cache.set(2, 3, True)
+        callback_cache[1, True] = 2
+        callback_cache[2, True] = 3
 
         f.assert_called_with(1, 2)
 
@@ -130,18 +130,18 @@ class TestVolatileLFUCache(unittest.TestCase):
         vals = [2, 3, 4, 5, 6, 7]
 
         for key, value in zip(keys, vals):
-            self.cache.set(key, value, True)
+            self.cache[key, True] = value
 
-        self.cache.set(1, 3, True)
-        self.cache.set(2, 4, True)
-        self.cache.set(3, 5, True)
-        self.cache.set(4, 6, True)
-        self.cache.set(5, 7, True)
-        self.cache.set(6, 8, True)
+        self.cache[1, True] = 3
+        self.cache[2, True] = 4
+        self.cache[3, True] = 5
+        self.cache[4, True] = 6
+        self.cache[5, True] = 7
+        self.cache[6, True] = 8
 
-        self.assertIn(1, self.cache)
-        self.assertIn(2, self.cache)
-        self.assertIn(3, self.cache)
-        self.assertIn(4, self.cache)
-        self.assertIn(5, self.cache)
-        self.assertIn(6, self.cache)
+        self.assertEqual(self.cache[1], 3)
+        self.assertEqual(self.cache[2], 4)
+        self.assertEqual(self.cache[3], 5)
+        self.assertEqual(self.cache[4], 6)
+        self.assertEqual(self.cache[5], 7)
+        self.assertEqual(self.cache[6], 8)

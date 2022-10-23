@@ -11,11 +11,11 @@ class TestVolatileLRUCache(unittest.TestCase):
     def setUp(self):
         self.cache = VolatileLRUCache(capacity=6, callback=None)
 
-        self.cache.set(1, 2, True)
-        self.cache.set(2, 3, True)
-        self.cache.set(3, 4, True)
-        self.cache.set(4, 5, True)
-        self.cache.set(5, 6, True)
+        self.cache[1, True] = 2
+        self.cache[2, True] = 3
+        self.cache[3, True] = 4
+        self.cache[4, True] = 5
+        self.cache[5, True] = 6
 
     def test_get_item_lru_update(self):
 
@@ -32,11 +32,11 @@ class TestVolatileLRUCache(unittest.TestCase):
     def test_get_item_lru_update_with_persistent_keys(self):
         cache = VolatileLRUCache(capacity=6, callback=None)
 
-        cache.set(1, 2, True)
-        cache.set(2, 3, False) # Persist
-        cache.set(3, 4, True)
-        cache.set(4, 5, True)
-        cache.set(5, 6, True)
+        cache[1, True] = 2
+        cache[2, False] = 3
+        cache[3, True] = 4
+        cache[4, True] = 5
+        cache[5, True] = 6
 
         cache[1]
         key, value = cache.popitem()
@@ -48,7 +48,8 @@ class TestVolatileLRUCache(unittest.TestCase):
         self.assertEqual(k, 1)
 
     def test_lru_set_item_lru_update(self):
-        self.cache.set(6, 7, True)
+        self.cache[6, True] = 7
+
         self.cache.popitem()
         self.cache.popitem()
         self.cache.popitem()
@@ -64,9 +65,9 @@ class TestVolatileLRUCache(unittest.TestCase):
         self.assertNotIn(5, self.cache)
 
     def test_lru_eviction(self):
-        self.cache.set(6, 7, True)
-        self.cache.set(7, 8, True)
-        self.cache.set(8, 9, True)
+        self.cache[6, True] = 7
+        self.cache[7, True] = 8
+        self.cache[8, True] = 9
         
         self.assertNotIn(1, self.cache)
         self.assertNotIn(2, self.cache)
@@ -77,8 +78,8 @@ class TestVolatileLRUCache(unittest.TestCase):
     
         callback_cache = VolatileLRUCache(capacity=1, callback=f)
         
-        callback_cache.set(1, 2, True)
-        callback_cache.set(2, 3, True)
+        callback_cache[1, True] = 2
+        callback_cache[2, True] = 3
 
         f.assert_called_with(1, 2)
 
@@ -88,14 +89,14 @@ class TestVolatileLRUCache(unittest.TestCase):
         vals = [2, 3, 4, 5, 6, 7]
 
         for key, value in zip(keys, vals):
-            self.cache.set(key, value, True)
+            self.cache[key, True] = value
 
-        self.cache.set(1, 3, True)
-        self.cache.set(2, 4, True)
-        self.cache.set(3, 5, True)
-        self.cache.set(4, 6, True)
-        self.cache.set(5, 7, True)
-        self.cache.set(6, 8, True)
+        self.cache[1, True] = 3
+        self.cache[2, True] = 4
+        self.cache[3, True] = 5
+        self.cache[4, True] = 6
+        self.cache[5, True] = 7
+        self.cache[6, True] = 8
 
         self.assertIn(1, self.cache)
         self.assertIn(2, self.cache)

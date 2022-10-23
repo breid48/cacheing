@@ -11,23 +11,19 @@ class TestVolatileRandomCache(unittest.TestCase):
     def setUp(self):
         self.cache = VolatileRandomCache(capacity=6, callback=None)
 
-        keys = [1, 2, 3, 4, 5]
-        vals = [2, 3, 4, 5, 6]
-
-        self.cache.set(1, 2, True)
-        self.cache.set(2, 3, True)
-        self.cache.set(3, 4, True)
-        self.cache.set(4, 5, True)
-        self.cache.set(5, 6, True)
-
+        self.cache[1, True] = 2
+        self.cache[2, True] = 3
+        self.cache[3, True] = 4
+        self.cache[4, True] = 5
+        self.cache[5, True] = 6
 
     def test_cache_length(self):
         self.assertEqual(5, len(self.cache))
 
         self.cache[1]
         self.cache[2]
-        self.cache.set(3, 5, True)
-        self.cache.set(3, 6, True)
+        self.cache[3, True] = 5
+        self.cache[3, True] = 6
         self.assertEqual(5, len(self.cache))
 
         del self.cache[1]
@@ -37,21 +33,21 @@ class TestVolatileRandomCache(unittest.TestCase):
         self.assertEqual(3, len(self.cache))
 
     def test_random_eviction(self):
-        self.cache.set(6, 7, True)
-        self.cache.set(7, 8, True)
-        self.cache.set(8, 9, True)
+        self.cache[6, True] = 7
+        self.cache[7, True] = 8
+        self.cache[8, True] = 9
 
         self.assertEqual(len(self.cache), 6)
 
     def test_eviction_no_candidate_items(self):
         cache = VolatileRandomCache(capacity=5)
 
-        cache.set(1, 2, False)
-        cache.set(2, 3, False)
-        cache.set(3, 4, False)
-        cache.set(4, 5, False)
-        cache.set(5, 6, False)
-        cache.set(6, 7, False)
+        cache[1, False] = 2
+        cache[2, False] = 3
+        cache[3, False] = 4
+        cache[4, False] = 5
+        cache[5, False] = 6
+        cache[6, False] = 7
 
         self.assertIn(1, cache)
         self.assertIn(2, cache)
@@ -66,21 +62,21 @@ class TestVolatileRandomCache(unittest.TestCase):
 
         callback_cache = VolatileRandomCache(capacity=4, callback=f)
         
-        callback_cache.set(6, 7, True)
-        callback_cache.set(7, 8, True)
-        callback_cache.set(8, 9, True)
-        callback_cache.set(9, 10, True)
-        callback_cache.set(10, 11, True)
+        callback_cache[6, True] = 7
+        callback_cache[7, True] = 8
+        callback_cache[8, True] = 9
+        callback_cache[9, True] = 10
+        callback_cache[10, True] = 11
 
         f.assert_called()
 
     def test_change_item_value(self):
-        self.cache.set(1, 3, True)
-        self.cache.set(2, 4, True)
-        self.cache.set(3, 5, True)
-        self.cache.set(4, 6, True)
-        self.cache.set(5, 7, True)
-        self.cache.set(6, 8, True)
+        self.cache[1, True] = 3
+        self.cache[2, True] = 4
+        self.cache[3, True] = 5
+        self.cache[4, True] = 6
+        self.cache[5, True] = 7
+        self.cache[6, True] = 8
 
         self.assertEqual(self.cache[1], 3)
         self.assertEqual(self.cache[2], 4)
@@ -92,13 +88,13 @@ class TestVolatileRandomCache(unittest.TestCase):
     def test_expiry_with_persistent_keys(self):
         cache = VolatileRandomCache(capacity=4)
 
-        cache.set(1, 2, False)
-        cache.set(2, 3, True)
-        cache.set(3, 4, False)
-        cache.set(4, 5, False)
-        cache.set(5, 6, True)
-        cache.set(6, 7, True)
-        cache.set(7, 8, True)
+        cache[1, False] = 2
+        cache[2, True] = 3
+        cache[3, False] = 4
+        cache[4, False] = 5
+        cache[5, True] = 6
+        cache[6, True] = 7
+        cache[7, True] = 8
 
         self.assertIn(1, cache)
         self.assertIn(3, cache)

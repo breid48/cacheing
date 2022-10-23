@@ -64,3 +64,30 @@ class TestTTLCache(IsolatedAsyncioTestCase):
         self.assertIn(5, self.cache)
         self.assertIn(6, self.cache)
         self.assertIn(7, self.cache)
+    
+    async def test_lru_and_time_eviction(self):
+        self.cache[1] = 2
+        self.cache[2] = 3
+        self.cache[3] = 4
+        self.cache[4] = 5
+        self.cache[5] = 6
+        self.cache[6] = 7
+
+        self.cache[7] = 8
+        self.cache[2]
+        self.cache[3]
+        self.cache[8] = 9
+
+        self.assertNotIn(1, self.cache)
+        self.assertNotIn(4, self.cache)
+
+        await asyncio.sleep(3) # Some Task
+
+        self.assertEqual(0, len(self.cache))
+
+        self.assertNotIn(2, self.cache)
+        self.assertNotIn(3, self.cache)
+        self.assertNotIn(5, self.cache)
+        self.assertNotIn(6, self.cache)
+        self.assertNotIn(7, self.cache)
+        self.assertNotIn(8, self.cache)
