@@ -13,11 +13,11 @@ class TestVolatileCache(unittest.TestCase):
     def setUp(self):
         self.cache = VolatileCache(capacity=6, callback=None)
 
-        self.cache.set(1, 2, False)
-        self.cache.set(2, 3, True)
-        self.cache.set(3, 4, True)
-        self.cache.set(4, 5, True)
-        self.cache.set(5, 6, True)
+        self.cache[1, False] = 2
+        self.cache[2, True] = 3
+        self.cache[3, True] = 4
+        self.cache[4, True] = 5
+        self.cache[5, True] = 6
 
     def test_set(self):
         self.assertIn(1, self.cache)
@@ -66,7 +66,7 @@ class TestVolatileCache(unittest.TestCase):
         cache = VolatileCache(capacity=128)
 
         for i in range(128):
-            cache.set(i, i+1, True)
+            cache[i, True] = i+1
 
         self.assertEqual(128, len(cache))
 
@@ -118,29 +118,30 @@ class TestVolatileCache(unittest.TestCase):
 
     def test_evict(self):
         cache = VolatileCache(capacity=10)
-        cache.set(1, 2, True)
-        cache.set(2, 3, True)
-        cache.set(3, 4, True)
+        cache[1, True] = 2
+        cache[2, True] = 3
+        cache[3, True] = 4
 
         cache._evict()
         self.assertNotIn(1, cache)
     
     def test_eviction_option(self):
         cache = VolatileCache(capacity=10)
-        cache.set(1, 2, False) # Key is set to persist, should not expire
-        cache.set(2, 3, True)
-        cache.set(3, 4, True)
+        
+        cache[1, False] = 2
+        cache[2, True] = 3
+        cache[3, True] = 4
 
         cache._evict()
         self.assertNotIn(2, cache)
 
-    def test_memory_overflow(self):
+    def test_cache_overflow(self):
         cache = VolatileCache(capacity=10)
 
         for i in range(10):
-            cache.set(i, i+1, True)
+            cache[i, True] = i+1
 
-        cache.set(11, 12, True)
+        cache[11, True] = 12
 
         self.assertEqual(len(cache), 10)
         self.assertIn(11, cache)
@@ -149,17 +150,17 @@ class TestVolatileCache(unittest.TestCase):
         cache = VolatileCache(capacity=10)
         eqcache = VolatileCache(capacity=10)
 
-        cache.set(1, 2, True)
-        cache.set(2, 3, True)
-        cache.set(3, 4, True)
+        cache[1, True] = 2
+        cache[2, True] = 3
+        cache[3, True] = 4
 
-        eqcache.set(1, 2, True)
-        eqcache.set(2, 3, True)
-        eqcache.set(3, 4, True)
+        eqcache[1, True] = 2
+        eqcache[2, True] = 3
+        eqcache[3, True] = 4
 
         self.assertEqual(cache, eqcache)
 
-        eqcache.set(4, 5, True)
+        eqcache[4, True] = 5
 
         self.assertNotEqual(cache, eqcache)
 

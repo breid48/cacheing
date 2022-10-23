@@ -113,14 +113,15 @@ class TestRCache(unittest.TestCase):
     def test_pop_false_member(self):
         self.assertRaises(KeyError, lambda: self.cache.pop(2))
 
-    # def test_evict(self):
-    #     cache = RCache(capacity=10)
-    #     cache[1] = 2
-    #     cache[2] = 3
-    #     cache[3] = 4
+    def test_evict(self):
+        cache = RCache(capacity=10)
+        cache[1] = 2
+        cache[2] = 3
+        cache[3] = 4
 
-    #     cache._evict()
-    #     self.assertNotIn(1, cache)
+        self.assertEqual(3, len(cache))
+        cache._evict()
+        self.assertEqual(2, len(cache))
 
     def test_cache_size_overflow(self):
         cache = RCache(capacity=10)
