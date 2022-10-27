@@ -6,3 +6,8 @@ ignore-patterns=^test.*
 
 # Disable pylint warnings for getters/setters
 docstring-min-length=3
+min-public-methods=0
+
+[MESSAGES CONTROL]
+
+disable=W0212
