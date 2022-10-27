@@ -1,10 +1,10 @@
 """
 Cacheing library providing various cacheing API's. Inspired
-by `cachetools` and Redis, this library supports Redis eviction 
+by `cachetools` and Redis, this library supports Redis-like eviction 
 policies that are not available in the `cachetools` python 
 standard library. 
 
-Per-item TTL's are supported in the 'VolatileTTLCache', as opposed
+Per-item TTL's are supported in the 'VTTLCache', as opposed
 to the global TTL's offered by `cachetools` TTLCache.
 
 Copyright 2022, Blake Reid.
@@ -143,7 +143,7 @@ class RCache(MutableMapping):
         return len(self.__cache)
 
     def __repr__(self):
-        return self.__class__.__name__ + str(self.__cache)
+        return "{}{}".format(self.__class__.__name__, self.__cache)
 
     def keys(self):
         return self.__cache.keys()
@@ -272,7 +272,7 @@ class VolatileCache:
         return len(self.__cache)
 
     def __repr__(self):
-        return self.__class__.__name__ + str(self.__cache)
+        return "{}{}".format(self.__class__.__name__, self.__cache)
 
     def keys(self):
         return self.__cache.keys()
