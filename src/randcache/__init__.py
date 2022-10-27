@@ -1,8 +1,8 @@
 """
 Cacheing library providing various cacheing API's. Inspired
-by `cachetools` and Redis, this library supports Redis-like eviction 
-policies that are not available in the `cachetools` python 
-standard library. 
+by `cachetools` and Redis, this library supports Redis-like eviction
+policies that are not available in the `cachetools` python
+standard library.
 
 Per-item TTL's are supported in the 'VTTLCache', as opposed
 to the global TTL's offered by `cachetools` TTLCache.
@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import List
 
 from src.randcache.utils import (
-    _TTLLink, 
+    _TTLLink,
     _TTLLinkedList,
     _LFUNode,
     _LFUFreqNode,
@@ -37,7 +37,7 @@ __all__ = (
     "VolatileRandomCache",
     "TTLCache",
     "VolatileTTLCache",
-    "BoundedCache"
+    "BoundedTTLCache"
 )
 
 
@@ -52,12 +52,10 @@ class RCache(MutableMapping):
         callback (callable, optional): Callable defining
         behaviour when an item is evicted from the cache.
         Defaults to None.
-  
     """
     __singleton = object()
 
     def __init__(self, capacity, callback=None):
-        """Initializes the Cache."""        
         self.__cache = {}
 
         self.__size = 0 # Number of Items in the Cache
@@ -77,7 +75,7 @@ class RCache(MutableMapping):
         try:
             return self.__cache[_key]
         except KeyError:
-            raise KeyError(_key)
+            raise KeyError(_key) from None
 
     def get(self, _key, _default=None):
         try:
@@ -101,9 +99,7 @@ class RCache(MutableMapping):
             return _value
 
     def popitem(self):
-        """Pop the most recent item from the cache.
-
-        """
+        """Pop the most recent item from the cache."""
         try:
             itm = self.__cache.popitem()
         except KeyError:
@@ -154,26 +150,21 @@ class RCache(MutableMapping):
     def items(self):
         return self.__cache.items()
 
-    # def update(self, _object: abc.Iterable):
-    #     return self.__cache.update(_object)
-
-    # def set_default(self, _key, _value):
-    #     return self.__cache.setdefault(_key, _value)
-
 
 class VolatileCache:
-
     """Base class for volatile-type caches.
 
     Supports cases of per-item persistance and non-evictions.
 
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     __singleton = object()
 
     def __init__(self, capacity, callback=None):
-        """Initializes RCache.
-
-        """        
         self.__cache = {}
 
         self.__size = 0
@@ -185,7 +176,7 @@ class VolatileCache:
 
     def __setitem__(self, _keymeta, _value):
         _key, expires = _keymeta
-        
+
         if _key not in self.__cache:
             while self.__size >= self.__capacity and self._expires_map:
                 self._evict()
@@ -203,9 +194,15 @@ class VolatileCache:
         try:
             return self.__cache[_key]
         except KeyError:
-            raise KeyError(_key)
+            raise KeyError(_key) from None
 
     def get(self, _key, _default=None):
+        """If key does not exist in the cache, returns default.
+
+        Args:
+            _key (hashable): Item key.
+            _default (object, optional): Defaults to None.
+        """
         try:
             return self[_key]
         except KeyError:
@@ -217,6 +214,15 @@ class VolatileCache:
         self.__size -= 1
 
     def pop(self, _key, default=__singleton):
+        """_summary_
+
+        Args:
+            _key (_type_): _description_
+            default (_type_, optional): _description_. Defaults to __singleton.
+
+        Returns:
+            _type_: _description_
+        """
         try:
             _value = self[_key]
             del self[_key]
@@ -228,9 +234,7 @@ class VolatileCache:
             return _value
 
     def popitem(self):
-        """Pop the most recent item from the cache.
-
-        """
+        """Pop the most recent item from the cache."""
         try:
             key, value = self.__cache.popitem()
             self._expires_map.pop(key, None)
@@ -282,17 +286,7 @@ class VolatileCache:
 
     def items(self):
         return self.__cache.items()
-    
-    def __eq__(self, object):
-        return (self.__cache == object.__cache and 
-                self._expires_map == object._expires_map)
 
-    # def update(self, _object: abc.Iterable):
-    #     return self.__cache.update(_object)
-
-    # def set_default(self, _key, _value):
-    #     return self.__cache.setdefault(_key, _value)
-    
 
 class LRUCache(RCache):
     """Least Recently Used Cache.
@@ -302,14 +296,13 @@ class LRUCache(RCache):
         callback (callable, optional): Callable defining
         behaviour when an item is evicted from the cache.
         Defaults to None.
-    
     """
     def __init__(self, capacity, callback=None):
         RCache.__init__(self, capacity, callback)
         self._lru = OrderedDict()
 
     def __getitem__(self, _key):
-        """Retrieves item and updates it's priority.
+        """Retrieves item from the cache.
 
         If the item exists, retrieve it from the cache
         and move it to the back of the OrderedDict.
@@ -326,17 +319,20 @@ class LRUCache(RCache):
             return _value
 
     def __setitem__(self, _key, _value):
-        """Add item to the cache and update it's LRU ordering.
-        
+        """Add item to the cache..
+
         If the item exists in the cache, update it's LRU ordering.
         If the item does not exist in the cache, add the item and
         then update it's LRU ordering.
 
+        Args:
+            _key (hashable): Item Key.
+            _value (object): Item Value.
         """
         RCache.__setitem__(self, _key, _value)
         self._lru[_key] = _value
-        
-        # Update LRU Ordering 
+
+        # Update LRU Ordering
         self._lru.move_to_end(_key, last=False)
 
     def __delitem__(self, _key):
@@ -344,9 +340,7 @@ class LRUCache(RCache):
         del self._lru[_key]
 
     def popitem(self):
-        """Force eviction of least-recently used item.
-        
-        """
+        """Force eviction of least-recently used item."""
         try:
             _key, _value = self._lru.popitem()
         except KeyError:
@@ -354,10 +348,10 @@ class LRUCache(RCache):
         else:
             RCache.__delitem__(self, _key)
             return (_key, _value)
-            
+
     def _evict(self):
         """Evict the least-recently used item.
-        
+
         Called when items are implicitly evicted
         from the cache.
 
@@ -365,7 +359,6 @@ class LRUCache(RCache):
         the cache and updates the LRU ordering.
         If a callback function is specified, the callback
         function is invoked.
-
         """
         try:
             _key, _value = self.popitem()
@@ -386,7 +379,12 @@ class VolatileLRUCache(VolatileCache):
 
     If the cache capacity is reached and there are no
     keys to expire, new data is discarded.
-    
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     def __init__(self, capacity, callback=None):
         VolatileCache.__init__(self, capacity, callback)
@@ -396,9 +394,9 @@ class VolatileLRUCache(VolatileCache):
         """Set an item in the cache.
 
         Args:
-            _expire (bool): Defines if this cache item expires
-            _key (object): Item Key
-            _value (object): Item Value
+            _expire (bool): Defines if this cache item expires.
+            _keymeta (tuple): Item Key & Expire Field.
+            _value (object): Item Value.
 
         """
         _key, _expire = _keymeta
@@ -407,19 +405,15 @@ class VolatileLRUCache(VolatileCache):
             raise TypeError("{} is not bool".format(_expire))
 
         VolatileCache.__setitem__(self, _keymeta, _value)
-        
+
         if _expire:
             self._lru[_key] = _value
-            
-            # Update LRU Ordering 
+
+            # Update LRU Ordering
             self._lru.move_to_end(_key, last=False)
-    
+
     def __getitem__(self, _key):
         """Retrieves item and updates it's priority.
-
-        If the item exists and it's expiry is set to True, 
-        retrieve it from the cache and move it to the back 
-        of the OrderedDict.
 
         Args:
             _key (object): Key.
@@ -439,23 +433,18 @@ class VolatileLRUCache(VolatileCache):
             del self._lru[_key]
 
     def popitem(self):
-        """Force eviction of least-recently used item.
-        
-        """
+        """Force eviction of least-recently used item."""
         try:
             _key, _value = self._lru.popitem()
         except KeyError:
             # Cache is at full-capacity and there are
             # no candidate keys to expire.
-            raise KeyError("cannot evict from empty cache") # *****only need one KeyError raised for these*****
+            raise KeyError("cannot evict from empty cache") from None
         else:
             VolatileCache.__delitem__(self, _key)
             return (_key, _value)
 
     def _evict(self):
-        """
-
-        """
         try:
             _key, _value = self.popitem()
         except KeyError:
@@ -471,10 +460,14 @@ class LFUCache(RCache):
     O(1) insertion, lookup, and deletion.
 
     References:
-        Ketan Shah, Anirban Mitra, and Dhruv Matani, An O(1) algorithm for implementing the LFU cache eviction scheme, (August 16, 2010).
+        Ketan Shah, Anirban Mitra, and Dhruv Matani, An O(1) algorithm for implementing the LFU
+        cache eviction scheme, (August 16, 2010).
 
-    Args:
-
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     def __init__(self, capacity, callback=None):
         RCache.__init__(self, capacity, callback)
@@ -541,17 +534,18 @@ class LFUCache(RCache):
             if self._callback:
                 self._callback(_key, _value)
 
-    def print_cache(self):
-        """ Remove """
-        self.__lfu.print_list()
-        
 
 class VolatileLFUCache(VolatileCache):
     """Volatile Least-Frequently Used Cache.
 
     Evicts key with `expire` field set to true using
     a least-frequently used eviction policy.
-    
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     def __init__(self, capacity, callback=None):
         VolatileCache.__init__(self, capacity, callback)
@@ -563,13 +557,13 @@ class VolatileLFUCache(VolatileCache):
         VolatileCache.__setitem__(self, _keymeta, _value)
 
         # Check if a node with this key already exists.
-        # If a node sharing this key exists in the LFU stream 
-        # and it's expiry setting is changed to False, remove 
+        # If a node sharing this key exists in the LFU stream
+        # and it's expiry setting is changed to False, remove
         # it from the LFU stream.
         if self.__lfu.cache.get(_key) and not _expires:
             node = self.__lfu.cache[_key]
             self.__lfu.delete_node(node)
-        
+
         # Otherwise, update it's value and access frequency.
         elif self.__lfu.cache.get(_key) and _expires:
             node = self.__lfu.cache[_key]
@@ -595,21 +589,12 @@ class VolatileLFUCache(VolatileCache):
 
     def __delitem__(self, _key):
         VolatileCache.__delitem__(self, _key)
-        
+
         if self.__lfu.cache.get(_key):
             node = self.__lfu.cache[_key]
             self.__lfu.delete_node(node)
 
     def popitem(self):
-        """Forces eviction of LFU item.
-
-        Raises:
-            KeyError: Cache is Empty
-
-        Returns:
-            tuple: (Key, Value) pair removed.
-        """
-        
         # If there's no items to expire, return None
         if not self._expires_map:
             return (None, None)
@@ -617,7 +602,6 @@ class VolatileLFUCache(VolatileCache):
         try:
             _key, _value = self.__lfu.delete_lfu_item()
         except KeyError:
-            raise
             raise KeyError("cannot evict from empty cache") from None
         else:
             VolatileCache.__delitem__(self, _key)
@@ -625,11 +609,9 @@ class VolatileLFUCache(VolatileCache):
             return (_key, _value)
 
     def _evict(self):
-        """Evicts non-persistent LFU Item and Invokes Callback Function.
-        
-        """
+        """Evicts non-persistent LFU Item."""
         if not self._expires_map:
-            return None
+            return
 
         try:
             _key, _value = self.__lfu.delete_lfu_item()
@@ -642,18 +624,23 @@ class VolatileLFUCache(VolatileCache):
 
 
 class RandomCache(RCache):
-    """Randomly chooses keys to evict from the cache.
+    """Cache with Random Eviction Policy.
 
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     def __init__(self, capacity, callback=None):
         RCache.__init__(self, capacity, callback)
-        
-        self.set = [] 
+
+        self.set = []
         # To maintain constant time across
         # all operations, maintain a dictionary
         # which tracks the index of each key stored
         # in `self.set`.
-        self.idx_map = {}  
+        self.idx_map = {}
 
     def __setitem__(self, _key, _value):
         RCache.__setitem__(self, _key, _value)
@@ -663,9 +650,9 @@ class RandomCache(RCache):
 
     def __delitem__(self, _key):
         RCache.__delitem__(self, _key)
-        # In order to perform a deletion without having 
+        # In order to perform a deletion without having
         # to decrement each element of `idx_map`, we
-        # swap the last element of `set` with the element 
+        # swap the last element of `set` with the element
         # to be deleted, and replace its index in `idx_map`.
         last_elem = self.set[-1]
         index = self.idx_map[_key]
@@ -674,14 +661,12 @@ class RandomCache(RCache):
         if index < ssize:
             self.set[index] = last_elem
             self.idx_map[last_elem] = index
-        
+
         self.set.pop()
         del self.idx_map[_key]
 
     def popitem(self):
-        """Force Eviction of Random item.
-        
-        """
+        """Force Eviction of Random item."""
         try:
             _key = self.__get_rand_key()
         except:
@@ -698,25 +683,28 @@ class RandomCache(RCache):
             self._callback(_key, _value)
 
     def __get_rand_key(self):
-        """Generate a random key from the cache.
-        
-        """
+        """Generate a random key from the cache."""
         return random.choice(self.set)
 
 
 class VolatileRandomCache(VolatileCache):
     """Randomly evicts keys that are set to expire.
 
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
     """
     def __init__(self, capacity, callback=None):
         VolatileCache.__init__(self, capacity, callback)
-        
-        self._set = [] 
+
+        self._set = []
         # To maintain constant time across
         # all operations, maintain a dictionary
         # which tracks the index of each key stored
         # in `self.set`.
-        self.idx_map = {}  
+        self.idx_map = {}
 
     def __setitem__(self, _keymeta, _value):
         _key, expires = _keymeta
@@ -725,12 +713,12 @@ class VolatileRandomCache(VolatileCache):
         if _key not in self.idx_map and expires:
             self._set.append(_key)
             self.idx_map[_key] = len(self._set) - 1
-    
+
     def __delitem__(self, _key):
         VolatileCache.__delitem__(self, _key)
-        # In order to perform a deletion without having 
-        # to iteratively decrement each element of `idx_map`, 
-        # we swap the last element of `set` with the element 
+        # In order to perform a deletion without having
+        # to iteratively decrement each element of `idx_map`,
+        # we swap the last element of `set` with the element
         # to be deleted, and then pop the last element from `set`.
         if _key in self.idx_map:
             last_elem = self._set[-1]
@@ -740,14 +728,12 @@ class VolatileRandomCache(VolatileCache):
             if index < ssize:
                 self._set[index] = last_elem
                 self.idx_map[last_elem] = index
-            
+
             self._set.pop()
             del self.idx_map[_key]
 
     def popitem(self):
-        """Force Eviction of Random item.
-        
-        """
+        """Force Eviction of Random item."""
         try:
             _key = self.__get_rand_key()
         except:
@@ -758,7 +744,6 @@ class VolatileRandomCache(VolatileCache):
             return (_key, _val)
 
     def _evict(self):
-        
         _key, _value = self.popitem()
 
         if self._callback:
@@ -766,46 +751,51 @@ class VolatileRandomCache(VolatileCache):
 
     def __get_rand_key(self):
         """Generate a random key from the cache.
-        
+
         """
         return random.choice(self._set)
 
 
 class TTLCache(LRUCache):
+    """TTL cache with global object fixed expiry times.
+
+    Monotonic time is used to track key expiry times.
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        ttl (int): Cache items time-to-live.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
+        time (callable): Callable time function used by the
+        cache.
     """
-    TTL cache base-class with global object fixed
-    expiry times.
-    
-    By default, monotonic time is used to track
-    key expiry times.
-    """
-    def __init__(self, capacity, ttl, callback=None, time=time.monotonic):
+    def __init__(self, capacity, ttl, callback=None, _time=time.monotonic):
         LRUCache.__init__(self, capacity, callback)
 
-        self.time = time
+        self._time = _time
         self.__ttl = ttl
 
         # Dict Mapping Keys to `_TTLLinks`
-        # this is primarily used for O(1) 
+        # this is primarily used for O(1)
         # lookup and deletions of `_TTLLinks`
         self._links = {}
-        
+
         # Linked List of '_TTLLinks'
         # The linked list is 'sorted' in time-ascending
-        # order. The key with the nearest expiry time is 
+        # order. The key with the nearest expiry time is
         # at the front of the list.
         self._list = _TTLLinkedList()
-    
+
     def expire(_time):
         """Removes expired keys from the cache.
-    
-        Decorator for class methods. Iterates over the linked 
+
+        Decorator for class methods. Iterates over the linked
         list and removes expired keys from the cache when
         the cache is accessed.
-
         """
         def wrap(func):
-            
+
             def wrapped_f(self, *args):
                 curr = self._list.head
 
@@ -817,7 +807,7 @@ class TTLCache(LRUCache):
                         curr = curr.next
                     else:
                         return func(self, *args)
-                
+
                 return func(self, *args)
             return wrapped_f
         return wrap
@@ -827,14 +817,14 @@ class TTLCache(LRUCache):
         LRUCache.__setitem__(self, _key, _value)
         try:
             link = self._links[_key]
-        except:
-            expiry = self.time() + self.__ttl
+        except KeyError:
+            expiry = self._time() + self.__ttl
             self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
-            expiry = self.time() + self.__ttl
+            expiry = self._time() + self.__ttl
             link.expiry = expiry
-        
+
         self._list.insert(link)
 
     @expire(_time=time.monotonic)
@@ -854,8 +844,8 @@ class TTLCache(LRUCache):
             raise KeyError(f"{_key}") from None
         else:
             link = self._links[_key]
-            self.__list.remove(link)
-            del self.__links[_key]
+            self._list.remove(link)
+            del self._links[_key]
 
     @expire(_time=time.monotonic)
     def __contains__(self, _object: object):
@@ -868,17 +858,17 @@ class TTLCache(LRUCache):
     @expire(_time=time.monotonic)
     def __len__(self):
         return RCache.__len__(self)
-    
+
     def _evict(self):
-        """Handle evictions when Cache exceeds capacity. 
+        """Handle evictions when Cache exceeds capacity.
         Not time-related.
 
         Invokes callback function whenever an item is evicted.
-        
+
         """
         # Fetch and Evict LRU Item from LRUCache
         _key, _value = LRUCache.popitem(self)
-        
+
         # Remove References to Link
         link = self._links[_key]
         self._list.remove(link)
@@ -886,72 +876,70 @@ class TTLCache(LRUCache):
 
         if self._callback:
             self._callback(_key, _value)
-    
+
     @expire(_time=time.monotonic)
     def __str__(self):
         return RCache.__repr__(self)
 
     def popitem(self):
-        """Evict the LRU item.
-
-        """
+        """Evict the LRU item."""
         # Fetch and Evict LRU Item from LRUCache
-        _key, _value = LRUCache.popitem()
-        
+        _key, _value = LRUCache.popitem(self)
+
         # Remove References to Link
         link = self._links[_key]
         self._list.remove(link)
         del self._links[_key]
 
     # Enable 'expire' decorator to be accessed
-    # outside of the scope of the class, while 
+    # outside of the scope of the class, while
     # still being inside the class namespace.
     expire = staticmethod(expire)
 
-    """
-
-    @expire(_time=time.monotonic())
-    def update(self, _object: abc.Iterable):
-        return self.__cache.update(_object)
-
-    @expire(_time=time.monotonic())
-    def set_default(self, _key, _value):
-        return self.__cache.setdefault(_key, _value)
-
-    def clear(self):
-        return self.__cache.clear()
-
-    """
-
 
 class VolatileTTLCache(VolatileLRUCache):
-    def __init__(self, capacity, ttl, callback=None, time=time.monotonic):
+    """TTL Cache with Volatile Keys.
+
+    Items with the expire field set to "True"
+    are evicted from the cache. Items with the
+    expire field set to "False" persist.
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        ttl (int): Cache items time-to-live.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
+        time (callable): Callable time function used by the
+        cache.
+    """
+    def __init__(self, capacity, ttl, callback=None, _time=time.monotonic):
         VolatileLRUCache.__init__(self, capacity, callback)
 
-        self.time = time
+        self._time = _time
         self.__ttl = ttl
 
         # Dict Mapping Keys to `_TTLLinks`
-        # this is primarily used for O(1) 
+        # this is primarily used for O(1)
         # lookup and deletions of `_TTLLinks`
         self._links = {}
-        
+
         # Linked List of '_TTLLinks'
         # The linked list is 'sorted' in time-ascending
-        # order. The key with the nearest expiry time is 
+        # order. The key with the nearest expiry time is
         # at the front of the list.
         self._list = _TTLLinkedList()
-    
+
     def expire(_time):
         """Removes expired keys from the cache.
-    
-        Decorator for class methods. Iterates over the linked 
+
+        Decorator for class methods. Iterates over the linked
         list and removes expired keys from the cache when
         the cache is accessed.
 
         """
         def wrap(func):
-            
+
             def wrapped_f(self, *args):
                 curr = self._list.head
 
@@ -963,7 +951,7 @@ class VolatileTTLCache(VolatileLRUCache):
                         curr = curr.next
                     else:
                         return func(self, *args)
-                
+
                 return func(self, *args)
             return wrapped_f
         return wrap
@@ -975,15 +963,15 @@ class VolatileTTLCache(VolatileLRUCache):
         VolatileLRUCache.__setitem__(self, _keymeta, _value)
         try:
             link = self._links[_key]
-        except:
+        except KeyError:
             if expires:
-                expiry = self.time() + self.__ttl
+                expiry = self._time() + self.__ttl
                 self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
-            expiry = self.time() + self.__ttl
+            expiry = self._time() + self.__ttl
             link.expiry = expiry
-        
+
         if expires:
             self._list.insert(link)
 
@@ -1019,17 +1007,17 @@ class VolatileTTLCache(VolatileLRUCache):
     @expire(_time=time.monotonic)
     def __len__(self):
         return VolatileCache.__len__(self)
-    
+
     def _evict(self):
-        """Handle evictions when Cache exceeds capacity. 
+        """Handle evictions when Cache exceeds capacity.
         Not time-related.
 
         Invokes callback function whenever an item is evicted.
-        
+
         """
         # Fetch and Evict LRU Item from LRUCache
         _key, _value = VolatileLRUCache.popitem(self)
-        
+
         # Remove References to Link
         if _key in self._links:
             link = self._links[_key]
@@ -1038,7 +1026,7 @@ class VolatileTTLCache(VolatileLRUCache):
 
         if self._callback:
             self._callback(_key, _value)
-    
+
     @expire(_time=time.monotonic)
     def __str__(self):
         return VolatileLRUCache.__repr__(self)
@@ -1048,8 +1036,8 @@ class VolatileTTLCache(VolatileLRUCache):
 
         """
         # Fetch and Evict LRU Item from LRUCache
-        _key, _value = VolatileLRUCache.popitem()
-        
+        _key, _value = VolatileLRUCache.popitem(self)
+
         # Remove References to Link
         if _key in self._list:
             link = self._links[_key]
@@ -1057,47 +1045,57 @@ class VolatileTTLCache(VolatileLRUCache):
             del self._links[_key]
 
     # Enable 'expire' decorator to be accessed
-    # outside of the scope of the class, while 
+    # outside of the scope of the class, while
     # still being inside the class namespace.
     expire = staticmethod(expire)
 
 
 class VTTLCache(TTLCache):
-    """Variable time-to-live cache with per-key time to lives.
+    """Variable time-to-live cache.
 
+    Time-to-live cache with variable internal
+    TTL's. TTL times are set per-item.
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
+        time (callable): Callable time function used by the
+        cache.
     """
-    def __init__(self, capacity, callback=None, time=time.monotonic):
-        TTLCache.__init__(self, capacity, ttl=None, callback=callback, time=time)
+    def __init__(self, capacity, callback=None, _time=time.monotonic):
+        TTLCache.__init__(self, capacity, ttl=None, callback=callback, _time=time)
         self.__rep = [] # List Representation of the Linked List
 
     @TTLCache.expire(_time=time.monotonic)
-    def __setitem__(self, _meta, _value):
-        _key, ttl = _meta
+    def __setitem__(self, _keymeta, _value):
+        _key, ttl = _keymeta
 
         LRUCache.__setitem__(self, _key, _value)
         try:
             link = self._links[_key]
-        except:
-            expiry = self.time() + ttl
+        except KeyError:
+            expiry = self._time() + ttl
             self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
             self.__rep.remove(link)
-            expiry = self.time() + ttl
-            link.expiry = expiry
-        
+            expiry = self._time() + ttl
+            link.expiry = expiry # Update Expiry Time Before Re-Insertion
+
         self.__insert(link, expiry, _key)
-    
+
     def _evict(self):
-        """Handle evictions when Cache exceeds capacity. 
+        """Handle evictions when Cache exceeds capacity.
         Not time-related.
 
         Invokes callback function whenever an item is evicted.
-        
+
         """
         # Fetch and Evict LRU Item from LRUCache
         _key, _value = LRUCache.popitem(self)
-        
+
         # Remove References to Link
         link = self._links[_key]
         self.__rep.remove(link)
@@ -1106,20 +1104,23 @@ class VTTLCache(TTLCache):
 
         if self._callback:
             self._callback(_key, _value)
-    
+
     def __binary_search(self, expiry):
         """Binary searches the list of TTL nodes.
+
+        Returns a tuple containing indexes used for insertion
+        to the linked list and list representation.
 
         Args:
             expiry (int): item expiry time.
 
         Returns:
-            int, int: Node insertion reference, list
-            insertion reference
-
+            int, int: Previous link reference index, list
+            insertion reference index.
         """
         left = 0
         right = tail = len(self.__rep) - 1
+        head = (0, 0)
 
         while left <= right:
             mid = (right + left) // 2
@@ -1127,33 +1128,34 @@ class VTTLCache(TTLCache):
             if self.__rep[mid].expiry < expiry:
                 if mid == tail:
                     return mid, mid + 1
-                elif self.__rep[mid + 1].expiry >= expiry:
+                if self.__rep[mid + 1].expiry >= expiry:
                     return mid, mid + 1
                 left += 1
-            
+
             elif self.__rep[mid].expiry > expiry:
                 if mid == 0:
-                    return 0, 0
-                elif self.__rep[mid - 1].expiry <= expiry:
+                    return head
+                if self.__rep[mid - 1].expiry <= expiry:
                     return mid, mid
                 right -= 1
-            
+
             else:
                 return mid, mid
-        
-        return 0, 0
-    
+
+        return head
+
     def __insert(self, link, expiry, _key):
         """Handle Insertions of Link to the Linked List
         and List Representation.
 
         Args:
-            link (_type_): _description_
-            expiry (_type_): _description_
+            link (_TTLLink): Link to insert.
+            expiry (int): Expiry time.
+            _key (hashable): Item Key.
 
         """
         node_index, list_index = self.__binary_search(expiry)
-        
+
         if self.__rep:
             prev_link = self.__rep[node_index]
         else:
@@ -1162,38 +1164,42 @@ class VTTLCache(TTLCache):
         self._list.sorted_insert(prev_link, link)
         self.__rep.insert(list_index, link)
 
-class BoundedTTLCache(TTLCache):
-    """
-    TTL Cache with Random Bounded Expiry Times.
 
+class BoundedTTLCache(TTLCache):
+    """TTL Cache with Random Bounded Expiry Times.
+
+    Item TTL's are randomly generated between
+    `ttl_min` and `ttl_max`.
+
+    Attributes:
+        capacity (int): Maximum capacity of the cache.
+        ttl_min (int): TTL minimum value.
+        ttl_max (int): TTL maximum value.
+        callback (callable, optional): Callable defining
+        behaviour when an item is evicted from the cache.
+        Defaults to None.
+        time (callable): Callable time function used by the
+        cache.
     """
-    def __init__(self, capacity, ttl_min, ttl_max, callback=None, time=time.monotonic):
+    def __init__(self, capacity, ttl_min, ttl_max, callback=None, _time=time.monotonic):
         TTLCache.__init__(self, capacity, None, callback, time)
         # TTL Bounds
         self.ttl_min = ttl_min
         self.ttl_max = ttl_max
-    
+
     @TTLCache.expire(_time=time.monotonic)
     def __setitem__(self, _key, _value):
         LRUCache.__setitem__(self, _key, _value)
         try:
             link = self._links[_key]
-        except:
+        except KeyError:
             ttl = random.randrange(self.ttl_min, self.ttl_max + 1)
-            expiry = self.time() + ttl
+            expiry = self._time() + ttl
             self._links[_key] = link = _TTLLink(_key, expiry, None, None)
         else:
             self._list.remove(link)
             ttl = random.randrange(self.ttl_min, self.ttl_max + 1)
-            expiry = self.time() + ttl
+            expiry = self._time() + ttl
             link.expiry = expiry
-        
+
         self._list.insert(link)
-        
-
-# class FIFOCache:
-#     pass
-
-# class LIFOCache:
-#     pass
-
