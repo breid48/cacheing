@@ -1,4 +1,4 @@
-name: Pylint
+name: Continuos Integration
 
 on: [push, pull_request]
 
@@ -21,3 +21,6 @@ jobs:
     - name: Analysing the code with pylint
       run: |
         pylint ./src --rcfile=./pylintrc --fail-under=9.0 
+    - name: Unit Test
+      run : |
+        python -m unittest discover -p 'test_*.py'
