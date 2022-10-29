@@ -150,6 +150,12 @@ class RCache(MutableMapping):
     def items(self):
         return self.__cache.items()
 
+    def __eq__(self, obj):
+        if isinstance(obj, RCache):
+            if self.__dict__ == obj.__dict__:
+                return True
+        return False
+
 
 class VolatileCache:
     """Base class for volatile-type caches.
@@ -286,6 +292,12 @@ class VolatileCache:
 
     def items(self):
         return self.__cache.items()
+
+    def __eq__(self, obj):
+        if isinstance(obj, VolatileCache):
+            if self.__dict__ == obj.__dict__:
+                return True
+        return False
 
 
 class LRUCache(RCache):
@@ -1065,7 +1077,7 @@ class VTTLCache(TTLCache):
         cache.
     """
     def __init__(self, capacity, callback=None, _time=time.monotonic):
-        TTLCache.__init__(self, capacity, ttl=None, callback=callback, _time=time)
+        TTLCache.__init__(self, capacity, ttl=None, callback=callback, _time=_time)
         self.__rep = [] # List Representation of the Linked List
 
     @TTLCache.expire(_time=time.monotonic)
@@ -1182,7 +1194,7 @@ class BoundedTTLCache(TTLCache):
         cache.
     """
     def __init__(self, capacity, ttl_min, ttl_max, callback=None, _time=time.monotonic):
-        TTLCache.__init__(self, capacity, None, callback, time)
+        TTLCache.__init__(self, capacity, None, callback, _time)
         # TTL Bounds
         self.ttl_min = ttl_min
         self.ttl_max = ttl_max

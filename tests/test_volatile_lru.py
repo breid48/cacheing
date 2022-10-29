@@ -104,3 +104,21 @@ class TestVolatileLRUCache(unittest.TestCase):
         self.assertIn(4, self.cache)
         self.assertIn(5, self.cache)
         self.assertIn(6, self.cache)
+
+    def test_object_equivalence(self):
+        cache = VolatileLRUCache(capacity=10)
+        eqcache = VolatileLRUCache(capacity=10)
+
+        cache[1, True] = 2
+        cache[2, True] = 3
+        cache[3, True] = 4
+
+        eqcache[1, True] = 2
+        eqcache[2, True] = 3
+        eqcache[3, True] = 4
+
+        self.assertEqual(cache, eqcache)
+
+        eqcache[4, True] = 5
+
+        self.assertNotEqual(cache, eqcache)
