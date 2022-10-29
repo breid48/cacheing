@@ -98,3 +98,21 @@ class TestLRUCache(unittest.TestCase):
         cache.popitem()
 
         self.assertEqual(49, len(cache))
+    
+    def test_object_equivalence(self):
+        cache = LRUCache(capacity=10)
+        eqcache = LRUCache(capacity=10)
+
+        cache[1] = 2
+        cache[2] = 3
+        cache[3] = 4
+
+        eqcache[1] = 2
+        eqcache[2] = 3
+        eqcache[3] = 4
+
+        self.assertEqual(cache, eqcache)
+
+        eqcache[4] = 5
+
+        self.assertNotEqual(cache, eqcache)
