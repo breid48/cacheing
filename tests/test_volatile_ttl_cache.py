@@ -1,4 +1,4 @@
-from src.randcache import VolatileTTLCache
+from src.rcache import VolatileTTLCache
 
 import asyncio
 from unittest import IsolatedAsyncioTestCase

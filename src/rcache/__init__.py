@@ -19,7 +19,7 @@ from collections.abc import MutableMapping, Iterable, KeysView, ItemsView, Value
 from datetime import datetime
 from typing import List
 
-from src.randcache.utils import (
+from src.rcache.utils import (
     _TTLLink,
     _TTLLinkedList,
     _LFUNode,

@@ -33,3 +33,6 @@ test-volatile-ttl:
 
 test-vttl:
 	python3 -m unittest tests/test_vttl_cache.py
+
+test-bounded-ttl:
+	python3 -m unittest tests/test_bounded_cache.py

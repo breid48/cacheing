@@ -1,4 +1,4 @@
-from src.randcache import BoundedTTLCache
+from src.rcache import BoundedTTLCache
 
 import asyncio
 from unittest import IsolatedAsyncioTestCase
