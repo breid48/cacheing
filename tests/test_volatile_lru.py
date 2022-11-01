@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from src.randcache import VolatileLRUCache
+from src.rcache import VolatileLRUCache
 
 
 class TestVolatileLRUCache(unittest.TestCase):

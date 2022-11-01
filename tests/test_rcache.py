@@ -4,7 +4,7 @@ import unittest
 
 from typing import ItemsView, KeysView, ValuesView
 
-from src.randcache import RCache
+from src.rcache import RCache
 
 
 class TestRCache(unittest.TestCase):

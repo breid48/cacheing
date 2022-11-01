@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 from typing import ItemsView, KeysView, ValuesView
 
-from src.randcache import VolatileCache
+from src.rcache import VolatileCache
 
 
 class TestVolatileCache(unittest.TestCase):

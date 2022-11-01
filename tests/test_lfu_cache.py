@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock
 from collections import Counter
 
-from src.randcache import LFUCache
+from src.rcache import LFUCache
 
 
 class TestLFUCache(unittest.TestCase):

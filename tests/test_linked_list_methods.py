@@ -2,7 +2,7 @@
 
 import unittest
 
-from src.randcache.utils import _TTLLink, _TTLLinkedList
+from src.rcache.utils import _TTLLink, _TTLLinkedList
 
 
 class TestLinkedList(unittest.TestCase):
@@ -43,6 +43,6 @@ class TestLinkedList(unittest.TestCase):
         self.assertEqual(None, self.pop_linked_list.head.next.next, msg="tail node in linked list does not point to None")
 
 
-# .self.default_link <src.randcache._Link object at 0x7f65fac424c0>
-# default head:  <src.randcache._Link object at 0x7f65fac42340> | default head next:  None
-# pop head: <src.randcache._Link object at 0x7f65fac424f0> | pop head next: <src.randcache._Link object at 0x7f65fac42340>
+# .self.default_link <src.rcache._Link object at 0x7f65fac424c0>
+# default head:  <src.rcache._Link object at 0x7f65fac42340> | default head next:  None
+# pop head: <src.rcache._Link object at 0x7f65fac424f0> | pop head next: <src.rcache._Link object at 0x7f65fac42340>
