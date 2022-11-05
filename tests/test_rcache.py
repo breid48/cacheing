@@ -166,3 +166,14 @@ class TestRCache(unittest.TestCase):
     def test_cache_size_after_popitem(self):
         self.cache.popitem()
         self.assertEqual(len(self.cache), 3)
+    
+    def test_popitem_from_empty_cache_raises_keyerror(self):
+        cache = RCache(capacity=10)
+        with self.assertRaises(KeyError):
+            cache.popitem()
+
+    def test_evict_from_empty_cache_raises_keyerror(self):
+        cache = RCache(capacity=10)
+        with self.assertRaises(KeyError):
+            cache._evict()
+    

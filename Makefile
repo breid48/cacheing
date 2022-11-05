@@ -1,3 +1,7 @@
+coverage:
+	coverage run -m unittest discover
+	coverage report
+
 test:
 	python3 -m unittest discover -p 'test_*.py'
 
