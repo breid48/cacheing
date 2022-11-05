@@ -122,3 +122,13 @@ class TestVolatileLRUCache(unittest.TestCase):
         eqcache[4, True] = 5
 
         self.assertNotEqual(cache, eqcache)
+
+    def test_popitem_with_no_candidate_keys(self):
+        cache = VolatileLRUCache(capacity=3)
+        
+        cache[1, False] = 2
+        cache[2, False] = 3
+        cache[3, False] = 4
+
+        with self.assertRaises(KeyError):
+            cache.popitem()

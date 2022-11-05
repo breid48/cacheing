@@ -8,14 +8,14 @@ from unittest import IsolatedAsyncioTestCase
 class TestTTLCache(IsolatedAsyncioTestCase):
 
     def setUp(self):
-        self.cache = TTLCache(capacity=6, ttl=3)
+        self.cache = TTLCache(capacity=6, ttl=2)
 
     async def test_expire_single_key(self):
             
         self.cache[1] = 2
         self.assertEqual(self.cache.get(1), 2)
         
-        await asyncio.sleep(3) # Some task
+        await asyncio.sleep(2) # Some task
 
         self.assertEqual(self.cache.get(1), None)
 
@@ -26,7 +26,7 @@ class TestTTLCache(IsolatedAsyncioTestCase):
         self.cache[3] = 4
         self.cache[4] = 5
         
-        await asyncio.sleep(3) # Some task
+        await asyncio.sleep(2) # Some task
 
         self.cache[5] = 6
 
@@ -39,7 +39,7 @@ class TestTTLCache(IsolatedAsyncioTestCase):
     async def test_expire_head(self):
         self.cache[1] = 2
         
-        await asyncio.sleep(3) # Some task
+        await asyncio.sleep(2) # Some task
 
         self.assertEqual(self.cache.get(1), None)
     
@@ -81,7 +81,7 @@ class TestTTLCache(IsolatedAsyncioTestCase):
         self.assertNotIn(1, self.cache)
         self.assertNotIn(4, self.cache)
 
-        await asyncio.sleep(3) # Some Task
+        await asyncio.sleep(2) # Some Task
 
         self.assertEqual(0, len(self.cache))
 
@@ -91,3 +91,45 @@ class TestTTLCache(IsolatedAsyncioTestCase):
         self.assertNotIn(6, self.cache)
         self.assertNotIn(7, self.cache)
         self.assertNotIn(8, self.cache)
+
+    async def test_inserting_duplicate_key(self):
+        self.cache[1] = 2
+        self.cache[2] = 3
+        self.cache[3] = 4
+        self.cache[4] = 5
+        self.cache[5] = 6
+        self.cache[6] = 7
+
+        await asyncio.sleep(1) # Some Task
+        
+        self.cache[1] = 3
+        self.cache[2] = 4
+        
+        self.assertEqual(3, self.cache._list.head.key)
+
+        await asyncio.sleep(1) # Some Task
+
+        self.assertNotIn(3, self.cache)
+        self.assertNotIn(4, self.cache)
+        self.assertNotIn(5, self.cache)
+        self.assertNotIn(6, self.cache)
+
+        self.assertIn(1, self.cache)
+        self.assertIn(2, self.cache)
+
+    def test_delitem(self):
+        self.cache[1] = 2
+        self.cache[2] = 3
+        self.cache[3] = 4
+        self.cache[4] = 5
+        self.cache[5] = 6
+        self.cache[6] = 7
+
+        self.assertEqual(1, self.cache._list.head.key)
+
+        del self.cache[1]
+        del self.cache[2]
+
+        self.assertNotIn(1, self.cache)
+        self.assertNotIn(2, self.cache)
+        self.assertEqual(3, self.cache._list.head.key)

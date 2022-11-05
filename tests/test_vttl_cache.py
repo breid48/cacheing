@@ -1,5 +1,6 @@
 from src.rcache import VTTLCache
 
+import time
 import asyncio
 from unittest import IsolatedAsyncioTestCase
 
@@ -10,7 +11,6 @@ class TestVTTLCache(IsolatedAsyncioTestCase):
         self.cache = VTTLCache(capacity=6)
 
     async def test_expire_single_key(self):
-            
         self.cache[1, 2] = 2
         self.assertEqual(self.cache.get(1), 2)
         
@@ -19,7 +19,6 @@ class TestVTTLCache(IsolatedAsyncioTestCase):
         self.assertEqual(self.cache.get(1), None)
 
     async def test_expire_multiple_keys(self):
-
         self.cache[1, 2] = 2
         self.cache[2, 2] = 3
         self.cache[3, 2] = 4
@@ -34,7 +33,7 @@ class TestVTTLCache(IsolatedAsyncioTestCase):
         self.assertEqual(self.cache.get(2), None)
         self.assertEqual(self.cache.get(3), None)
         self.assertEqual(self.cache.get(4), None)
-    
+
     async def test_expiry_different_ttls(self):  
         self.cache[1, 2] = 2
         self.cache[2, 5] = 3

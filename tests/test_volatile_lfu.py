@@ -145,3 +145,25 @@ class TestVolatileLFUCache(unittest.TestCase):
         self.assertEqual(self.cache[4], 6)
         self.assertEqual(self.cache[5], 7)
         self.assertEqual(self.cache[6], 8)
+
+    def test_delitem(self):
+        self.cache[10, False] = 11
+        self.cache[11, False] = 12
+
+        self.assertNotIn(1, self.cache)
+
+        del self.cache[2]
+        del self.cache[10]
+
+        self.cache[12, False] = 13
+        self.cache[13, False] = 14
+        self.cache[14, False] = 15
+        
+        
+        self.assertNotIn(3, self.cache)
+        self.assertIn(4, self.cache)
+        self.assertIn(5, self.cache)
+        self.assertIn(11, self.cache)
+        self.assertIn(12, self.cache)
+        self.assertIn(13, self.cache)
+        self.assertIn(14, self.cache)
