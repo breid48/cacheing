@@ -86,7 +86,7 @@ class _TTLLinkedList:
             self.__head = self.__tail = link
             return
 
-        if prev_link.expiry < link.expiry:
+        if prev_link.expiry <= link.expiry:
             link.next = prev_link.next
             link.prev = prev_link
             prev_link.next = link

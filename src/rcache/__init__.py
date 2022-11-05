@@ -445,13 +445,16 @@ class VolatileLRUCache(VolatileCache):
             del self._lru[_key]
 
     def popitem(self):
-        """Force eviction of least-recently used item."""
+        """Pop non-persistent LRU item from the cache.
+        
+        If no candidate keys are available, raises KeyError.        
+        """
         try:
             _key, _value = self._lru.popitem()
         except KeyError:
             # Cache is at full-capacity and there are
-            # no candidate keys to expire.
-            raise KeyError("cannot evict from empty cache") from None
+            # no candidate keys to pop.
+            raise KeyError("no candidate keys") from None
         else:
             VolatileCache.__delitem__(self, _key)
             return (_key, _value)
@@ -533,7 +536,6 @@ class LFUCache(RCache):
             raise KeyError("cannot evict from empty cache") from None
         else:
             RCache.__delitem__(self, _key)
-            #print(self.__dict__)
             return (_key, _value)
 
     def _evict(self):
@@ -617,7 +619,6 @@ class VolatileLFUCache(VolatileCache):
             raise KeyError("cannot evict from empty cache") from None
         else:
             VolatileCache.__delitem__(self, _key)
-            #print(self.__dict__)
             return (_key, _value)
 
     def _evict(self):
@@ -810,9 +811,9 @@ class TTLCache(LRUCache):
 
             def wrapped_f(self, *args):
                 curr = self._list.head
-
+    
                 while curr:
-                    if curr.expiry < _time():
+                    if curr.expiry <= _time():
                         LRUCache.__delitem__(self, curr.key)
                         self._list.remove(curr)
                         del self._links[curr.key]
@@ -847,6 +848,13 @@ class TTLCache(LRUCache):
             raise KeyError(f"{_key}") from None
         else:
             return _value
+
+    @expire(_time=time.monotonic)
+    def get(self, _key, _default=None):
+        try:
+            return self[_key]
+        except KeyError:
+            return _default
 
     @expire(_time=time.monotonic)
     def __delitem__(self, _key):
@@ -956,7 +964,7 @@ class VolatileTTLCache(VolatileLRUCache):
                 curr = self._list.head
 
                 while curr:
-                    if curr.expiry < _time():
+                    if curr.expiry <= _time():
                         VolatileLRUCache.__delitem__(self, curr.key)
                         self._list.remove(curr)
                         del self._links[curr.key]
@@ -995,6 +1003,13 @@ class VolatileTTLCache(VolatileLRUCache):
             raise KeyError(f"{_key}") from None
         else:
             return _value
+    
+    @expire(_time=time.monotonic)
+    def get(self, _key, _default=None):
+        try:
+            return self[_key]
+        except KeyError:
+            return _default
 
     @expire(_time=time.monotonic)
     def __delitem__(self, _key):
@@ -1095,7 +1110,7 @@ class VTTLCache(TTLCache):
             self.__rep.remove(link)
             expiry = self._time() + ttl
             link.expiry = expiry # Update Expiry Time Before Re-Insertion
-
+        
         self.__insert(link, expiry, _key)
 
     def _evict(self):
@@ -1181,7 +1196,7 @@ class BoundedTTLCache(TTLCache):
     """TTL Cache with Random Bounded Expiry Times.
 
     Item TTL's are randomly generated between
-    `ttl_min` and `ttl_max`.
+    `ttl_min` and `ttl_max`. Range: [ttl_min, ttl_max].
 
     Attributes:
         capacity (int): Maximum capacity of the cache.
