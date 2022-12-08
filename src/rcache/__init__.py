@@ -62,6 +62,10 @@ class RCache(MutableMapping):
         self.__capacity = capacity
         self._callback = callback
 
+    @property
+    def capacity(self):
+        return self.__capacity
+
     def __setitem__(self, _key, _value):
         if _key not in self.__cache:
             while self.__size >= self.__capacity:
@@ -179,6 +183,10 @@ class VolatileCache:
 
         # Dict containing items which expire
         self._expires_map = {}
+    
+    @property
+    def capacity(self):
+        return self.__capacity
 
     def __setitem__(self, _keymeta, _value):
         _key, expires = _keymeta
