@@ -2,7 +2,6 @@
 Library containing various doubly linked list implementations intended to
 be used with the cache's.
 """
-
 from collections import OrderedDict
 
 
@@ -103,7 +102,7 @@ class _TTLLinkedList:
                 self.__head = link
 
 
-class _LFUNode:
+class LFUNode:
     """Object representing each item in the LFU cache.
 
     Each `LFUNode` contains its value and
@@ -115,94 +114,25 @@ class _LFUNode:
         value (object): Item Value.
         parent (_LFUFreqNode): Parent `_LFUFreqNode.`
     """
-    def __init__(self, key, value, parent):
-        self.key = key
-        self.value = value
-        self.parent = parent
+    __slots__ = ['frequency', 'prev', 'next', 'items']
 
-
-class _LFUFreqNode:
-    """Doubly linked list of `_LFUNode` objects
-    mapping to the same access frequency.
-
-    Args:
-        frequency (int): Access frequency.
-        nxt (_LFUFreqNode): Next _LFUFreqNode in the list.
-        prev (_LFUFreqNode): Previous _LFUFreqNode in the list.
-    """
-    def __init__(self, frequency, nxt, prev):
+    def __init__(self, frequency, prev=None, next=None):
         self.frequency = frequency
-        self.next = nxt
         self.prev = prev
-
-        # Maintain an OrderedDict of `_LFUNode`
-        # objects sharing the same frequency.
+        self.next = next
         self.items = OrderedDict()
 
 
-class _LFUList:
-    """Doubly Linked List of `_LFUFreqNode` objects
+class LFULinkedList:
+    """Doubly linked list of `LFUNode` objects. """
 
-    Args:
-        head (_LFUFreqNode): Head of the DLL.
+    __slots__ = ['head', 'node_cache']
 
-    """
     def __init__(self):
-        self.head = _LFUFreqNode(0, None, None) # Init Head.
-        self.cache = {} # Cache Mapping Keys to their respective
-                        # `_LFUNode` objects.
+        self.head = LFUNode(frequency=0) # Dummy Head
+        self.node_cache = {} # Mapping Keys -> LFULinkedList Nodes
 
-    def delete_lfu_item(self):
-        """Evicts least-frequently used item from the cache.
-
-        Removes all references to the least-frequently
-        used `_LFUNode` from the `_LFUList` cache and linked lists.
-
-        Returns:
-            node.key (hashable): Item Key.
-            node.value (object): Item Value.
-
-        """
-        node = self.head.next.items.popitem(last=False)[0] # Pop & Retrieve LFU Item
-
-        del self.cache[node.key]
-
-        if not node.parent.items:
-            self._remove_link(node.parent)
-
-        return node.key, node.value
-
-    def delete_node(self, node):
-        """Removes a `_LFUNode`.
-
-        Args:
-            node (_LFUNode): `_LFUNode` to remove.
-        """
-        del node.parent.items[node]
-
-        if not node.parent.items:
-            self._remove_link(node.parent)
-
-        del self.cache[node.key]
-
-    def _remove_link(self, node):
-        """Removes a `_LFUFreqNode` from the doubly linked list.
-
-        Args:
-            node (_LFUFreqNode): `_LFUFreqNode` to remove.
-        """
-        if node.prev and node.next:
-            node.prev.next = node.next
-            node.next.prev = node.prev
-        elif node.prev:
-            node.prev.next = None
-        elif node.next:
-            node.next.prev = self.head
-            self.head.next = node.next
-        elif node == self.head:
-            raise TypeError("can't remove head")
-
-    def insert(self, _key, _value):
+    def insert(self, key):
         """Create and Insert a new item into the DLL.
 
         By default, all new elements are inserted with an access
@@ -214,22 +144,17 @@ class _LFUList:
             _key (hashable): Item Key.
             _value (object): Item Value.
         """
-        if _key in self.cache:
-            return
+        head = self.head
+        if not head.next:
+            node = LFUNode(frequency=1, prev=head, next=None)
+            head.next = node
 
-        if not self.head.next or self.head.next.frequency > 1:
-            parent = _LFUFreqNode(1, self.head.next, self.head)
-            if self.head.next:
-                self.head.next.prev = parent
-            self.head.next = parent
-        else:
-            parent = self.head.next
+        node = head.next
+        node.items[key] = None
+        self.node_cache[key] = node
 
-        node = _LFUNode(_key, _value, parent)
-        self.cache[_key] = node
-        parent.items[node] = None
-
-    def access_node(self, node):
+    #@profile
+    def increment(self, key):
         """Update the Access-Frequency of a Node.
 
         When an item in the cache is accessed, it's
@@ -244,28 +169,42 @@ class _LFUList:
         Args:
             node (_LFUNode): `_LFUNode` to access.
         """
-        freq = node.parent.frequency
-        prev_parent = node.parent
+        node = self.node_cache[key] # 14.4%
+        del node.items[key] # 18.7%
+        #node_next = node.next # 10.5%
 
-        if node.parent.next:
-            if node.parent.next.frequency == freq + 1:
-                node.parent.next.items[node] = None
-                node.parent = node.parent.next
-            else:
-                freq_node = _LFUFreqNode(freq + 1, nxt=node.parent.next, prev=node.parent)
-                node.parent.next.prev = freq_node
-                node.parent.next = freq_node
-                node.parent = node.parent.next
-                freq_node.items[node] = None
+        if node.next and node.next.frequency == node.frequency+1: # 11.8%
+            node.next.items[key] = None # 16.5%
         else:
-            freq_node = _LFUFreqNode(freq + 1, nxt=None, prev=node.parent)
-            node.parent.next = freq_node
-            node.parent = node.parent.next
-            freq_node.items[node] = None
+            new_node = LFUNode(frequency=node.frequency+1, prev=node, next=node.next)
+            new_node.items[key] = None
+            node.next = new_node
 
-        del prev_parent.items[node]
+        self.node_cache[key] = node.next # 15.0%
 
-        # After removal, if there's no _LFUNodes
-        # sharing this frequency, delete the _FreqNode
-        if not prev_parent.items:
-            self._remove_link(prev_parent)
+    def delete(self, key):
+        """Delete key from the linked list. """
+        node = self.node_cache[key]
+        del node.items[key]
+        del self.node_cache[key]
+
+    def popleft(self):
+        """Evicts least-frequently used item from the cache.
+
+        Removes all references to the least-frequently
+        used `_LFUNode` from the `_LFUList` cache and linked lists.
+
+        Returns:
+            node.key (hashable): Item Key.
+            node.value (object): Item Value.
+
+        """
+        curr = self.head.next
+        while curr:
+            if curr.items:
+                key, _ = curr.items.popitem(False)
+                del self.node_cache[key]
+                return key
+            curr = curr.next
+
+        raise KeyError("cannot pop from empty cache.")
