@@ -22,9 +22,8 @@ from typing import List
 from src.rcache.utils import (
     _TTLLink,
     _TTLLinkedList,
-    _LFUNode,
-    _LFUFreqNode,
-    _LFUList
+    LFULinkedList,
+    LFUNode
     )
 
 __all__ = (
@@ -183,7 +182,7 @@ class VolatileCache:
 
         # Dict containing items which expire
         self._expires_map = {}
-    
+
     @property
     def capacity(self):
         return self.__capacity
@@ -419,14 +418,14 @@ class VolatileLRUCache(VolatileCache):
             _value (object): Item Value.
 
         """
-        _key, _expire = _keymeta
+        _key, _expires = _keymeta
 
-        if not isinstance(_expire, bool):
-            raise TypeError("{} is not bool".format(_expire))
+        if not isinstance(_expires, bool):
+            raise TypeError("{} is not bool".format(_expires))
 
         VolatileCache.__setitem__(self, _keymeta, _value)
 
-        if _expire:
+        if _expires:
             self._lru[_key] = _value
 
             # Update LRU Ordering
@@ -454,8 +453,8 @@ class VolatileLRUCache(VolatileCache):
 
     def popitem(self):
         """Pop non-persistent LRU item from the cache.
-        
-        If no candidate keys are available, raises KeyError.        
+
+        If no candidate keys are available, raises KeyError.
         """
         try:
             _key, _value = self._lru.popitem()
@@ -493,68 +492,44 @@ class LFUCache(RCache):
         Defaults to None.
     """
     def __init__(self, capacity, callback=None):
-        RCache.__init__(self, capacity, callback)
-        self.__lfu = _LFUList()
+        RCache.__init__(self, capacity=capacity, callback=callback)
+
+        self.__lfu = LFULinkedList()
+        self.node_cache = self.__lfu.node_cache
 
     def __setitem__(self, _key, _value):
         RCache.__setitem__(self, _key, _value)
 
-        # If a node with this `key` already exists,
-        # update it's value and access frequency.
-        if self.__lfu.cache.get(_key):
-            node = self.__lfu.cache[_key]
-            node.value = _value
-            self.__lfu.access_node(node)
-
-        # Otherwise, create the node and insert
-        # it into the DLL.
+        if _key in self.node_cache:
+            self.__lfu.increment(_key)
         else:
-            self.__lfu.insert(_key, _value)
+            self.__lfu.insert(_key)
 
     def __getitem__(self, _key):
-        try:
-            _node = self.__lfu.cache[_key]
-        except KeyError:
-            raise KeyError(f"{_key}") from None
+        _value = RCache.__getitem__(self, _key)
+        self.__lfu.increment(_key)
 
-        self.__lfu.access_node(_node)
-
-        return _node.value
+        return _value
 
     def __delitem__(self, _key):
         RCache.__delitem__(self, _key)
-        _node = self.__lfu.cache[_key]
-        self.__lfu.delete_node(_node)
+        self.__lfu.delete(_key)
 
     def popitem(self):
-        """Forces eviction of LFU item.
-
-        Raises:
-            KeyError: Cache is Empty
+        """Force eviction of LFU item.
 
         Returns:
-            tuple: (Key, Value) pair removed.
+            tuple: LFU item key, value pair.
         """
-        if not self.__lfu.cache:
-            raise KeyError("cannot pop from empty cache")
-
-        try:
-            _key, _value = self.__lfu.delete_lfu_item()
-        except KeyError:
-            raise KeyError("cannot evict from empty cache") from None
-        else:
-            RCache.__delitem__(self, _key)
-            return (_key, _value)
+        key = self.__lfu.popleft()
+        value = RCache.__getitem__(self, key)
+        RCache.__delitem__(self, key)
+        return (key, value)
 
     def _evict(self):
-        try:
-            _key, _value = self.__lfu.delete_lfu_item()
-        except KeyError:
-            raise KeyError("cannot evict from empty cache") from None
-        else:
-            RCache.__delitem__(self, _key)
-            if self._callback:
-                self._callback(_key, _value)
+        key, value = self.popitem()
+        if self._callback:
+            self._callback(key, value)
 
 
 class VolatileLFUCache(VolatileCache):
@@ -571,77 +546,62 @@ class VolatileLFUCache(VolatileCache):
     """
     def __init__(self, capacity, callback=None):
         VolatileCache.__init__(self, capacity, callback)
-        self.__lfu = _LFUList()
+        self.__lfu = LFULinkedList()
+        self.node_cache = self.__lfu.node_cache
 
     def __setitem__(self, _keymeta, _value):
         _key, _expires = _keymeta
+
+        if not isinstance(_expires, bool):
+            raise TypeError("{} is not bool".format(_expires))
 
         VolatileCache.__setitem__(self, _keymeta, _value)
 
         # Check if a node with this key already exists.
         # If a node sharing this key exists in the LFU stream
-        # and it's expiry setting is changed to False, remove
-        # it from the LFU stream.
-        if self.__lfu.cache.get(_key) and not _expires:
-            node = self.__lfu.cache[_key]
-            self.__lfu.delete_node(node)
+        # and it's expiry is CHANGED to False, remove
+        # it from the LFU stream:
+        if _key in self.node_cache and not _expires:
+            self.__lfu.delete(_key)
 
-        # Otherwise, update it's value and access frequency.
-        elif self.__lfu.cache.get(_key) and _expires:
-            node = self.__lfu.cache[_key]
-            node.value = _value
-            self.__lfu.access_node(node)
+        # Otherwise, increment it's access frequency:
+        elif _key in self.node_cache and _expires:
+            self.__lfu.increment(_key)
 
-        # If no preexisting node exists, create the node and insert
-        # it into the DLL.
-        elif not self.__lfu.cache.get(_key) and _expires:
-            self.__lfu.insert(_key, _value)
+        # If the item does not exist, and it's expiry is
+        # set to True - insert it into the linked list:
+        elif _key not in self.node_cache and _expires:
+            self.__lfu.insert(_key)
 
     def __getitem__(self, _key):
-        try:
-            value = VolatileCache.__getitem__(self, _key)
-        except KeyError:
-            raise KeyError(f"{_key}") from None
+        _value = VolatileCache.__getitem__(self, _key)
 
-        if self.__lfu.cache.get(_key):
-            node = self.__lfu.cache[_key]
-            self.__lfu.access_node(node)
+        if _key in self.node_cache:
+            self.__lfu.increment(_key)
 
-        return value
+        return _value
 
     def __delitem__(self, _key):
         VolatileCache.__delitem__(self, _key)
 
-        if self.__lfu.cache.get(_key):
-            node = self.__lfu.cache[_key]
-            self.__lfu.delete_node(node)
+        if _key in self.node_cache:
+            self.__lfu.delete(_key)
 
     def popitem(self):
         # If there's no items to expire, return None
         if not self._expires_map:
             return (None, None)
 
-        try:
-            _key, _value = self.__lfu.delete_lfu_item()
-        except KeyError:
-            raise KeyError("cannot evict from empty cache") from None
-        else:
-            VolatileCache.__delitem__(self, _key)
-            return (_key, _value)
+        _key = self.__lfu.popleft()
+        _value = VolatileCache.__getitem__(self, _key)
+        VolatileCache.__delitem__(self, _key)
+        return (_key, _value)
 
     def _evict(self):
         """Evicts non-persistent LFU Item."""
-        if not self._expires_map:
-            return
-
-        try:
-            _key, _value = self.__lfu.delete_lfu_item()
-        except KeyError:
-            raise KeyError("cannot evict from empty cache") from None
-        else:
-            VolatileCache.__delitem__(self, _key)
-            if self._callback:
-                self._callback(_key, _value)
+        _key, _value = self.popitem()
+        if self._callback:
+            self._callback(_key, _value)
 
 
 class RandomCache(RCache):
@@ -819,7 +779,7 @@ class TTLCache(LRUCache):
 
             def wrapped_f(self, *args):
                 curr = self._list.head
-    
+
                 while curr:
                     if curr.expiry <= _time():
                         LRUCache.__delitem__(self, curr.key)
@@ -1011,7 +971,7 @@ class VolatileTTLCache(VolatileLRUCache):
             raise KeyError(f"{_key}") from None
         else:
             return _value
-    
+
     @expire(_time=time.monotonic)
     def get(self, _key, _default=None):
         try:
@@ -1118,7 +1078,7 @@ class VTTLCache(TTLCache):
             self.__rep.remove(link)
             expiry = self._time() + ttl
             link.expiry = expiry # Update Expiry Time Before Re-Insertion
-        
+
         self.__insert(link, expiry, _key)
 
     def _evict(self):
