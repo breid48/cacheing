@@ -53,10 +53,11 @@ def transform_data(cache_results: dict):
 
 
 def display(cache_results: dict):
-    """_summary_
+    """Build and display results.
 
     Args:
-        cache_results (dict): _description_
+        cache_results (dict): Cache results yielded from
+        `benchmark.compile_benchmarks()`.
     """
     transformed_results = transform_data(cache_results=cache_results)
     build_dataframe(transformed_results)
