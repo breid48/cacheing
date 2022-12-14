@@ -3,51 +3,40 @@
 
 ![Coverage](https://img.shields.io/codecov/c/github/breid48/rcache?token=E2GVMUS6KU)
 
-### Performance
+---
 
-RCache offers 2-4x performance increases over Python's popular "Cachetools" library. The benchmark 
-script referenced below is standardized in ./benchmark.py.
+### Motivation
 
-*Cache Maxsize=256, Num. Insertions=400
+---
 
-| Cache Type | OS | CPU | Cachetools | RCache |
-| ------ | ----- | ----- | ------ | ----- |
-| LRU | Windows 10 | Ryzen 5 5600H | 5.16302 | 2.89601 |
-| LFU | Windows 10 | Ryzen 5 5600H | 19.5839 | 5.72118 |
-| LRU | Ubuntu 20.04 | Ryzen 5 5600H | 4.4773 | 2.55951 |
-| LFU | Ubuntu 20.04 | Ryzen 5 5600H | 17.9818 | 5.50492 |
+The initial motivation behind this package was twofold: fix the long insertion/eviction times in `cachetools.LFUCache` and provide an alternative to the `cachetools.TTLCache` offering variable per-key TTL's.
 
-*Cache Maxsize=512, Num. Insertions=600
-
-| Cache Type | OS | CPU | Cachetools | RCache |
-| ------ | ----- | ----- | ------ | ----- |
-| LRU | Windows 10 | Ryzen 5 5600H | 8.63297 | 4.96194 |
-| LFU | Windows 10 | Ryzen 5 5600H | 42.9374 | 9.84216 |
-| LRU | Ubuntu 20.04 | Ryzen 5 5600H | 7.98137 | 4.38634 |
-| LFU | Ubuntu 20.04 | Ryzen 5 5600H | 40.8033 | 9.71117 |
 
 ### Installation
 
+---
+
 ```
-
 pip install -U rcache
-
 ```
 
 And then in your python interpreter:
 
 ```python
-
 import rcache
-
 ```
 
 ### Updating
 
+---
+
+
+
 ### Usage
 
-```python
+---
 
+```python
 >>> from rcache import LFUCache
 
 >>> cache = LFUCache(capacity=2)
@@ -58,5 +47,59 @@ import rcache
 
 >>> cache
 LFUCache{2: 3, 3: 4}
-
 ```
+
+### Benchmark
+
+---
+
+RCache has an included benchmarking library found in `./benchmark`.
+
+```shell
+$ python3 ./benchmark.py --help
+
+usage: benchmark [-h] [--cache [CACHE [CACHE ...]]] [--method [{get,set,delete} [{get,set,delete} ...]]]
+
+arguments:
+  -h, --help            show this help message and exit
+  --cache [CACHE [CACHE ...]], -c [CACHE [CACHE ...]]
+                        cache(s) to benchmark. example: rcache.LRUCache.
+  --method [{get,set,delete} [{get,set,delete} ...]], -m [{get,set,delete} [{get,set,delete} ...]]
+                        method(s) to benchmark.
+```
+
+#### Run the Benchmarks:
+```shell
+$ cd benchmark
+
+$ python3 ./benchmark.py --cache cachetools.LRUCache rcache.LRUCache --method set get delete
+```
+
+
+### Performance
+
+--- 
+All benchmark times were measured using the provided `benchmark` library. See the
+[benchmark section](#Benchmark) for details. The default benchmarking configuration executes 100,000 get operations, 
+20,000 set operations and `n = cache_size` delete operations. The median, p90, and p99 times for each
+operation, measured in microseconds, or `1e-6`, are displayed in the figures below.
+
+---
+
+####    Get (LFU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Delete (LFU Cache)
+
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_get.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_delete.png" width="250">
+
+####    Set (LFU Cache) &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Set - Cross Section (LFU Cache)
+
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set_crosssection.png" width="250">
+
+---
+
+####    Set (LRU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Get (LRU Cache)
+
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_set.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_get.png" width="250">
+
+#### Delete (LRU Cache)
+
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_delete.png" width="250">
