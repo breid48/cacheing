@@ -88,18 +88,18 @@ operation, measured in microseconds, or `1e-6`, are displayed in the figures bel
 
 ####    Get (LFU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Delete (LFU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_get.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_delete.png" width="250">
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_get.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_delete.png" width="300">
 
 ####    Set (LFU Cache) &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Set - Cross Section (LFU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set_crosssection.png" width="250">
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set_crosssection.png" width="300">
 
 ---
 
 ####    Set (LRU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Get (LRU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_set.png" width="250"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_get.png" width="250">
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_get.png" width="300">
 
 #### Delete (LRU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_delete.png" width="250">
+<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_delete.png" width="300">
