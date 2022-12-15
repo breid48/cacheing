@@ -1,4 +1,4 @@
-## RCache - Pure Python Cacheing Library
+## cacheing - Pure Python Cacheing Library
 
 
 ![Coverage](https://img.shields.io/codecov/c/github/breid48/rcache?token=E2GVMUS6KU)
@@ -17,13 +17,13 @@ The initial motivation behind this package was twofold: fix the long insertion/e
 ---
 
 ```
-pip install -U rcache
+pip install -U cacheing
 ```
 
 And then in your python interpreter:
 
 ```python
-import rcache
+import cacheing
 ```
 
 ### Updating
@@ -37,7 +37,7 @@ import rcache
 ---
 
 ```python
->>> from rcache import LFUCache
+>>> from cacheing import LFUCache
 
 >>> cache = LFUCache(capacity=2)
 
@@ -53,7 +53,7 @@ LFUCache{2: 3, 3: 4}
 
 ---
 
-RCache has an included benchmarking library found in `./benchmark`.
+cacheing has an included benchmarking library found in `./benchmark`.
 
 ```shell
 $ python3 ./benchmark.py --help
@@ -63,7 +63,7 @@ usage: benchmark [-h] [--cache [CACHE [CACHE ...]]] [--method [{get,set,delete} 
 arguments:
   -h, --help            show this help message and exit
   --cache [CACHE [CACHE ...]], -c [CACHE [CACHE ...]]
-                        cache(s) to benchmark. example: rcache.LRUCache.
+                        cache(s) to benchmark. example: cacheing.LRUCache.
   --method [{get,set,delete} [{get,set,delete} ...]], -m [{get,set,delete} [{get,set,delete} ...]]
                         method(s) to benchmark.
 ```
@@ -72,7 +72,7 @@ arguments:
 ```shell
 $ cd benchmark
 
-$ python3 ./benchmark.py --cache cachetools.LRUCache rcache.LRUCache --method set get delete
+$ python3 ./benchmark.py --cache cachetools.LRUCache cacheing.LRUCache --method set get delete
 ```
 
 
@@ -88,18 +88,18 @@ operation, measured in microseconds, or `1e-6`, are displayed in the figures bel
 
 ####    Get (LFU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Delete (LFU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_get.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_delete.png" width="300">
+<img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_get.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_delete.png" width="300">
 
 ####    Set (LFU Cache) &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Set - Cross Section (LFU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lfu_set_crosssection.png" width="300">
+<img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_set_crosssection.png" width="300">
 
 ---
 
 ####    Set (LRU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Get (LRU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_get.png" width="300">
+<img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lru_set.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lru_get.png" width="300">
 
 #### Delete (LRU Cache)
 
-<img src="https://raw.githubusercontent.com/breid48/rcache/main/assets/lru_delete.png" width="300">
+<img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lru_delete.png" width="300">

@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import Mock
 from collections import OrderedDict
 
-from src.rcache import LRUCache
+from src.cacheing import LRUCache
 
 
 class TestLRUCache(unittest.TestCase):

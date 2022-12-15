@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import Mock
 
-from src.rcache import RandomCache
+from src.cacheing import RandomCache
 
 
 class TestRandomCache(unittest.TestCase):
