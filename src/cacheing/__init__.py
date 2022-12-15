@@ -18,7 +18,7 @@ from collections import OrderedDict, Counter
 from collections.abc import MutableMapping, Iterable, KeysView, ItemsView, ValuesView
 from typing import List
 
-from utils import (
+from .utils import (
     _TTLLink,
     _TTLLinkedList,
     LFULinkedList,
