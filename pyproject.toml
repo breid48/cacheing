@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "rcache"
+version = "0.1.0"
+description = "a performant python cacheing library"
+authors = ["Blake Reid <breid48@uwo.ca>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/breid48/rcache"
+repository = "https://github.com/breid48/rcache"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+packages = [{include = "rcache", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.group.dev.dependencies]
+importlib = "^1.0.4"
+numpy = "^1.23.5"
+pandas = "^1.5.2"
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/breid48/rcache/issues/"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
