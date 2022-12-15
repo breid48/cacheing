@@ -25,7 +25,7 @@ def parser_add_args(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
         "--cache", "-c",
         action='store',
         nargs='*',
-        help='cache(s) to benchmark. example: rcache.LRUCache.'
+        help='cache(s) to benchmark. example: cacheing.LRUCache.'
     )
     parser.add_argument(
         "--method", "-m",
