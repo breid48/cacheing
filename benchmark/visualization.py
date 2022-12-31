@@ -27,8 +27,8 @@ def build_dataframe(results: dict):
     df_get = pd.DataFrame.from_dict(bar_chart_data["get"])
     df_delete = pd.DataFrame.from_dict(bar_chart_data["delete"])
 
-    print("Get: \n", df_set)
-    print("Set: \n", df_get)
+    print("Set: \n", df_set)
+    print("Get: \n", df_get)
     print("Delete: \n", df_delete)
 
 
