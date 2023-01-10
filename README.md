@@ -16,7 +16,7 @@
 ### Supported Caches
 - [LFUCache](#LFUCache)
 - [LRUCache](#LRUCache)
-- [VolatileCache(s)](#VolatileCache(s))
+- [VolatileCache(s)](#VolatileCaches)
 - [TTLCache](#TTLCache)
 - [VTTLCache](#VTTLCache)
 - [RandomCache](#RandomCache)
@@ -207,7 +207,7 @@ cache[3] = 4
 LRUCache{1: 2, 3: 4}
 ```
 
-### VolatileCache(s)
+### VolatileCaches
 
 ---
 VolatileCache's are inspired by the Redis API's of the same name. See [Redis Eviction Polciies](https://redis.io/docs/reference/eviction/). 
