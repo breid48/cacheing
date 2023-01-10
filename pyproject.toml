@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "cacheing"
-version = "0.1.0"
+version = "0.1.1"
 description = "a performant python cacheing library"
 authors = ["Blake Reid <breid48@uwo.ca>"]
 license = "MIT"
