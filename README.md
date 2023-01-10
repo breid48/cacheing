@@ -8,7 +8,7 @@
 
 - [Installation](#Installation)
 - [Updating](#Updating)
-- [Basic Usage](#Basic Usage)
+- [Basic Usage](#basic-usage)
 - [Benchmark](#Benchmark)
 - [Performance](#Performance)
 - [Callback Functions](#callback-functions)
@@ -126,7 +126,7 @@ operation, measured in microseconds, or `1e-6`, are displayed in the figures bel
 <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lru_delete.png" width="300">
 
 
-###Callback Functions
+### Callback Functions
 
 ---
 
