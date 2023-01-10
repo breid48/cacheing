@@ -210,10 +210,10 @@ LRUCache{1: 2, 3: 4}
 ### VolatileCaches
 
 ---
-VolatileCache's are inspired by the Redis API's of the same name. See [Redis Eviction Polciies](https://redis.io/docs/reference/eviction/). 
+VolatileCache's are inspired by the Redis API's of the same name. See [Redis Eviction Policies](https://redis.io/docs/reference/eviction/). 
 
-VolatileCache's are variants of LFU, LRU, Random, and TTL Cache's offerring optional item eviction. Specific cache items can be held in-memory
-by setting their unique `expire` field to `False`.
+VolatileCache's are variants of LFU, LRU, Random, and TTL Cache's offering optional item eviction. Specific cache items can be held in-memory
+by setting their unique `expire` fields to `False`.
 
 Volatile variant supported:
 
