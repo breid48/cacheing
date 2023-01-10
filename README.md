@@ -107,7 +107,7 @@ All benchmark times were measured using the provided `benchmark` library. See th
 operation, measured in microseconds, or `1e-6`, are displayed in the figures below.
 
 
-####Get (LFU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Delete (LFU Cache)
+#### Get (LFU Cache)  &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;            Delete (LFU Cache)
 
 <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_get.png" width="300"> <img src="https://raw.githubusercontent.com/breid48/cacheing/main/assets/lfu_delete.png" width="300">
 
@@ -166,7 +166,7 @@ is at capacity and a request is made to insert a new item, the item with the lea
 
 Usage is tracked by-key. Gets and Sets are considered usage qualifiers.
 
-See: [LFU Benchmarks](#Benchmarks)
+See: [LFU Benchmarks](#Performance)
 ```python
 from cacheing import LFUCache
 
@@ -191,7 +191,7 @@ is at capacity and a request is made to insert a new item, the least-recently ac
 
 Usage is tracked by-key. Gets and Sets are considered usage qualifiers.
 
-See: [LRU Benchmarks](#Benchmarks)
+See: [LRU Benchmarks](#Performance)
 ```python
 from cacheing import LRUCache
 
