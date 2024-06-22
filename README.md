@@ -3,6 +3,7 @@
 ---
 
 ![Coverage](https://img.shields.io/codecov/c/github/breid48/rcache?token=E2GVMUS6KU)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/cacheing)
 
 ### Resources
 
