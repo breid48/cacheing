@@ -1,6 +1,7 @@
 ## cacheing - Pure Python Cacheing Library
 
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/cacheing)
+![PyPI - Version](https://img.shields.io/pypi/v/cacheing.svg?logo=pypi&logoColor=FFE873)
 ![Coverage](https://img.shields.io/codecov/c/github/breid48/rcache?token=E2GVMUS6KU)
 ![Test Pipeline](https://github.com/breid48/cacheing/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/github/license/breid48/cacheing.svg)
