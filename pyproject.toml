@@ -24,7 +24,7 @@ python = "^3.8"
 [tool.poetry.group.dev.dependencies]
 importlib = "^1.0.4"
 numpy = "^1.23.5"
-pandas = "^1.5.2"
+pandas = ">=1.5.2,<3.0.0"
 
 [tool.poetry.urls]
 "Bug Tracker" = "https://github.com/breid48/cacheing/issues/"
